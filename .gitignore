@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependencies
+# ─────────────────────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Build artefacts
+# ─────────────────────────────────────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test / coverage
+# ─────────────────────────────────────────────────────────────────────────────
+coverage/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cache / tooling
+# ─────────────────────────────────────────────────────────────────────────────
+.turbo/
+.eslintcache
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Temporary upload staging directory (bugreport-api)
+# ─────────────────────────────────────────────────────────────────────────────
+tmp/
+uploads/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OS / editor noise
+# ─────────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Environment files and local secrets
+#
+# These lines are intentionally COMMENTED OUT so that .env files are tracked
+# during the initial setup phase, allowing the team to review defaults.
+#
+# Once the project is stable and production secrets are in use, uncomment the
+# lines below (or move them to per-package .gitignore files) to ensure that
+# real credentials are never committed.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Uncomment these when you want to start ignoring local env files:
+# .env
+# .env.local
+# .env.*.local
+# apps/bugreport-api/.env

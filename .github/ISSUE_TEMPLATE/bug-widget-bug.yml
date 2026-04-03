@@ -1,0 +1,54 @@
+name: "🐛 Bug Report (Widget / SDK / API)"
+description: "Report a bug in the bug reporter platform itself"
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to report bugs **in the bug reporter platform** (not for reporting stage app bugs — use the widget for that).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: "What happened?"
+      description: "Describe the bug."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected result"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to reproduce"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Severity"
+      options:
+        - "severity:blocker"
+        - "severity:high"
+        - "severity:medium"
+        - "severity:low"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment"
+      placeholder: "e.g. bugreport-api v0.1.0 on Node 20"
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Notes / additional context"

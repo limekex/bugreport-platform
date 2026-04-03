@@ -1,0 +1,45 @@
+name: "✨ Feature Request (Widget / SDK)"
+description: "Request a new feature or enhancement to the bug reporter widget or SDK"
+title: "[Feature]: "
+labels: ["enhancement", "widget-sdk"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for your feature request! Please fill in the sections below.
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: "Goal"
+      description: "What problem does this feature solve?"
+      placeholder: "As a tester, I want to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: "Scope"
+      description: "Which parts of the codebase are involved?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance criteria"
+      description: "How do we know this feature is done?"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority"
+      options:
+        - "priority:high"
+        - "priority:medium"
+        - "priority:low"
+    validations:
+      required: true
