@@ -1,45 +1,255 @@
 import type { BugReporterConfig } from '@bugreport/shared-types';
 import { buildReportPayload } from '../utils/payloadBuilder';
 import { submitReport } from '../utils/apiClient';
+import { capturePageScreenshot } from '../utils/screenshotCapture';
 
 const SUCCESS_AUTO_CLOSE_DELAY_MS = 4000;
 const MODAL_ID = '__bugreport_modal__';
-
 const OVERLAY_ID = '__bugreport_overlay__';
+const STYLE_ID = '__bugreport_styles__';
 
 export interface ModalCallbacks {
   onClose: () => void;
 }
 
+// ── CSS ──────────────────────────────────────────────────────────────────────
+// Injected once as a <style> tag so the modal has a polished, production-ready
+// look without requiring a CSS framework or React.
+
+function injectStyles(): void {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `
+    /* ── Overlay ─────────────────────────────────────────────── */
+    #${OVERLAY_ID} {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(2px);
+      z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+      animation: __br_fade_in 0.15s ease-out;
+    }
+    @keyframes __br_fade_in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* ── Modal panel ────────────────────────────────────────── */
+    #${MODAL_ID} {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 24px 24px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: #1f2937;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05);
+      animation: __br_slide_up 0.2s ease-out;
+    }
+    @keyframes __br_slide_up {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .__br_header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .__br_title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .__br_close_btn {
+      background: none; border: none;
+      font-size: 18px; cursor: pointer;
+      color: #9ca3af;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .__br_close_btn:hover { background: #f3f4f6; color: #374151; }
+
+    /* ── Form fields ────────────────────────────────────────── */
+    .__br_field {
+      margin-bottom: 16px;
+    }
+    .__br_label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #374151;
+      font-size: 13px;
+    }
+    .__br_required {
+      color: #dc2626;
+      margin-left: 2px;
+    }
+    .__br_input,
+    .__br_select,
+    .__br_textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #1f2937;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .__br_input:focus,
+    .__br_select:focus,
+    .__br_textarea:focus {
+      outline: none;
+      border-color: #e11d48;
+      box-shadow: 0 0 0 3px rgba(225,29,72,0.1);
+    }
+    .__br_textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .__br_select {
+      appearance: auto;
+    }
+    .__br_hint {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* ── Screenshot section ──────────────────────────────────── */
+    .__br_screenshot_row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .__br_capture_btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      color: #374151;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .__br_capture_btn:hover { background: #e5e7eb; border-color: #9ca3af; }
+    .__br_capture_btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .__br_capture_preview {
+      margin-top: 8px;
+      max-width: 100%;
+      max-height: 120px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+    }
+    .__br_or_divider {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* ── Status messages ─────────────────────────────────────── */
+    .__br_status_success {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #d1fae5;
+      color: #065f46;
+      font-size: 13px;
+    }
+    .__br_status_success a { color: #065f46; font-weight: 600; }
+    .__br_status_error {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 13px;
+    }
+
+    /* ── Submit button ───────────────────────────────────────── */
+    .__br_submit_btn {
+      margin-top: 18px;
+      width: 100%;
+      padding: 11px 16px;
+      background: #e11d48;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .__br_submit_btn:hover:not(:disabled) { background: #be123c; }
+    .__br_submit_btn:active:not(:disabled) { transform: scale(0.99); }
+    .__br_submit_btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    /* ── Responsive (narrow viewports) ──────────────────────── */
+    @media (max-width: 480px) {
+      #${MODAL_ID} {
+        padding: 20px 16px 16px;
+        border-radius: 12px 12px 0 0;
+        max-height: 95vh;
+      }
+      #${OVERLAY_ID} {
+        align-items: flex-end;
+        padding: 0;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// ── Open / close ──────────────────────────────────────────────────────────────
+
 /**
  * Opens the bug report modal and wires up form submission.
  *
- * The modal is a plain DOM element — no React required.
- * It collects all required fields, builds the multipart payload using
- * payloadBuilder, and submits to the backend via apiClient.
+ * The modal is a plain DOM element with production-ready CSS injected into the
+ * page. No React or CSS framework required — works in any web app.
+ *
+ * Features:
+ * - Focus trap (Tab/Shift-Tab cycle within modal)
+ * - Animated overlay + slide-up entrance
+ * - Responsive layout (stacks on mobile)
+ * - "Capture current screen" button (html2canvas when available)
+ * - Accessible: aria roles, keyboard dismiss, label associations
  */
 export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks): void {
   if (document.getElementById(MODAL_ID)) return;
 
+  injectStyles();
+
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
-  overlay.setAttribute(
-    'style',
-    'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;' +
-      'display:flex;align-items:center;justify-content:center;padding:16px;',
-  );
 
   const modal = document.createElement('div');
   modal.id = MODAL_ID;
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
   modal.setAttribute('aria-labelledby', '__bugreport_title__');
-  modal.setAttribute(
-    'style',
-    'background:#fff;border-radius:8px;padding:24px;width:100%;max-width:560px;' +
-      'max-height:90vh;overflow-y:auto;font-family:system-ui,sans-serif;font-size:14px;' +
-      'box-shadow:0 20px 60px rgba(0,0,0,0.3);',
-  );
 
   modal.innerHTML = buildFormHtml();
   overlay.appendChild(modal);
@@ -55,24 +265,99 @@ export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks):
 
   document.addEventListener('keydown', handleEscKey);
 
+  // ── Focus trap ─────────────────────────────────────────────────────────────
+  trapFocus(modal);
+
+  // ── Screenshot capture button ──────────────────────────────────────────────
+  const captureBtn = document.getElementById('__br_capture_btn__');
+  captureBtn?.addEventListener('click', async () => {
+    await handleCaptureScreenshot(captureBtn);
+  });
+
   // ── Form submission ────────────────────────────────────────────────────────
   const form = document.getElementById('__bugreport_form__') as HTMLFormElement | null;
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await handleSubmit(form, config, callbacks);
   });
+
+  // Focus the first input
+  const firstInput = modal.querySelector('input, select, textarea') as HTMLElement | null;
+  firstInput?.focus();
 }
 
 export function closeModal(callbacks?: ModalCallbacks): void {
-  document.getElementById(OVERLAY_ID)?.remove();
+  const overlay = document.getElementById(OVERLAY_ID);
+  if (overlay) {
+    overlay.style.animation = 'none';
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.12s ease-in';
+    setTimeout(() => overlay.remove(), 120);
+  }
   document.removeEventListener('keydown', handleEscKey);
   callbacks?.onClose();
+}
+
+// ── Focus trap ────────────────────────────────────────────────────────────────
+
+function trapFocus(container: HTMLElement): void {
+  container.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+
+    const focusable = container.querySelectorAll<HTMLElement>(
+      'input, select, textarea, button, [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 function handleEscKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') closeModal();
+}
+
+async function handleCaptureScreenshot(captureBtn: HTMLElement): Promise<void> {
+  const preview = document.getElementById('__br_capture_preview__') as HTMLImageElement | null;
+  const fileInput = document.getElementById('__br_screenshot__') as HTMLInputElement | null;
+  const captureContainer = document.getElementById('__br_capture_data__') as HTMLInputElement | null;
+
+  captureBtn.setAttribute('disabled', 'true');
+  captureBtn.textContent = '📸 Capturing…';
+
+  try {
+    // Hide the modal overlay temporarily so it's not in the screenshot
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (overlay) overlay.style.display = 'none';
+
+    const dataUrl = await capturePageScreenshot();
+
+    if (overlay) overlay.style.display = '';
+
+    if (dataUrl && preview && captureContainer) {
+      preview.src = dataUrl;
+      preview.style.display = 'block';
+      captureContainer.value = dataUrl;
+      // Clear the file input so the capture takes precedence
+      if (fileInput) fileInput.value = '';
+    }
+  } catch {
+    // Silently fail — the user can still upload manually
+  }
+
+  captureBtn.removeAttribute('disabled');
+  captureBtn.textContent = '📸 Capture screen';
 }
 
 async function handleSubmit(
@@ -98,7 +383,11 @@ async function handleSubmit(
       config,
     );
 
-    if (values.screenshot) {
+    // Attach screenshot — prefer captured screenshot, fall back to file upload
+    if (values.capturedScreenshot) {
+      const blob = dataUrlToBlob(values.capturedScreenshot);
+      formData.append('screenshot', blob, 'screenshot.png');
+    } else if (values.screenshot) {
       formData.append('screenshot', values.screenshot);
     }
 
@@ -111,6 +400,15 @@ async function handleSubmit(
   }
 }
 
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] ?? 'image/png';
+  const bytes = atob(base64);
+  const array = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) array[i] = bytes.charCodeAt(i);
+  return new Blob([array], { type: mime });
+}
+
 function collectFormValues(form: HTMLFormElement): {
   summary: string;
   severity: string;
@@ -120,9 +418,11 @@ function collectFormValues(form: HTMLFormElement): {
   stepsToReproduce: string;
   notes: string;
   screenshot: File | null;
+  capturedScreenshot: string;
 } {
   const data = new FormData(form);
   const screenshot = (form.querySelector('#__br_screenshot__') as HTMLInputElement)?.files?.[0] ?? null;
+  const capturedScreenshot = (form.querySelector('#__br_capture_data__') as HTMLInputElement)?.value ?? '';
   return {
     summary: String(data.get('summary') ?? ''),
     severity: String(data.get('severity') ?? 'medium'),
@@ -132,6 +432,7 @@ function collectFormValues(form: HTMLFormElement): {
     stepsToReproduce: String(data.get('stepsToReproduce') ?? ''),
     notes: String(data.get('notes') ?? ''),
     screenshot,
+    capturedScreenshot,
   };
 }
 
@@ -144,6 +445,7 @@ function setFormState(form: HTMLFormElement, state: FormState, message?: string)
   if (!submitBtn || !statusEl) return;
 
   statusEl.innerHTML = '';
+  statusEl.className = '';
   submitBtn.disabled = false;
 
   if (state === 'loading') {
@@ -151,54 +453,34 @@ function setFormState(form: HTMLFormElement, state: FormState, message?: string)
     submitBtn.textContent = 'Submitting…';
   } else if (state === 'success') {
     submitBtn.textContent = 'Submit bug report';
-    statusEl.setAttribute(
-      'style',
-      'margin-top:12px;padding:10px 14px;border-radius:6px;background:#d1fae5;color:#065f46;font-size:13px;',
-    );
-    statusEl.innerHTML = `✅ Bug report submitted! <a href="${message}" target="_blank" rel="noopener" style="color:#065f46;font-weight:600;">View GitHub issue →</a>`;
-
-    // Auto-close after SUCCESS_AUTO_CLOSE_DELAY_MS on success
+    statusEl.className = '__br_status_success';
+    statusEl.innerHTML = `✅ Bug report submitted! <a href="${message}" target="_blank" rel="noopener">View GitHub issue →</a>`;
     setTimeout(() => closeModal(), SUCCESS_AUTO_CLOSE_DELAY_MS);
   } else if (state === 'error') {
     submitBtn.textContent = 'Submit bug report';
-    statusEl.setAttribute(
-      'style',
-      'margin-top:12px;padding:10px 14px;border-radius:6px;background:#fee2e2;color:#991b1b;font-size:13px;',
-    );
+    statusEl.className = '__br_status_error';
     statusEl.textContent = `❌ ${message ?? 'Something went wrong. Please try again.'}`;
   }
 }
 
-function label(text: string, htmlFor: string, required = false): string {
-  return `<label for="${htmlFor}" style="display:block;font-weight:600;margin-bottom:4px;color:#374151;">${text}${required ? ' <span style="color:#dc2626;">*</span>' : ''}</label>`;
-}
-
-function textarea(id: string, name: string, rows = 3, placeholder = ''): string {
-  return `<textarea id="${id}" name="${name}" rows="${rows}" placeholder="${placeholder}" required
-    style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;resize:vertical;font-family:inherit;"></textarea>`;
-}
-
 function buildFormHtml(): string {
   return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <h2 id="__bugreport_title__" style="margin:0;font-size:18px;color:#111827;">🐛 Report a bug</h2>
-      <button id="__bugreport_close__" type="button" aria-label="Close"
-        style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
+    <div class="__br_header">
+      <h2 id="__bugreport_title__" class="__br_title">🐛 Report a bug</h2>
+      <button id="__bugreport_close__" type="button" aria-label="Close" class="__br_close_btn">✕</button>
     </div>
 
     <form id="__bugreport_form__" novalidate>
 
-      <div style="margin-bottom:14px;">
-        ${label('Summary', '__br_summary__', true)}
+      <div class="__br_field">
+        <label for="__br_summary__" class="__br_label">Summary<span class="__br_required">*</span></label>
         <input id="__br_summary__" name="summary" type="text" required maxlength="200"
-          placeholder="One-line summary of the bug"
-          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" />
+          placeholder="One-line summary of the bug" class="__br_input" />
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('Severity', '__br_severity__', true)}
-        <select id="__br_severity__" name="severity" required
-          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff;">
+      <div class="__br_field">
+        <label for="__br_severity__" class="__br_label">Severity<span class="__br_required">*</span></label>
+        <select id="__br_severity__" name="severity" required class="__br_select">
           <option value="low">Low — minor / cosmetic</option>
           <option value="medium" selected>Medium — feature partially broken</option>
           <option value="high">High — major feature broken</option>
@@ -206,43 +488,54 @@ function buildFormHtml(): string {
         </select>
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('What happened?', '__br_whatHappened__', true)}
-        ${textarea('__br_whatHappened__', 'whatHappened', 3, 'Describe what you observed…')}
+      <div class="__br_field">
+        <label for="__br_whatHappened__" class="__br_label">What happened?<span class="__br_required">*</span></label>
+        <textarea id="__br_whatHappened__" name="whatHappened" rows="3"
+          placeholder="Describe what you observed…" required class="__br_textarea"></textarea>
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('Expected result', '__br_expectedResult__', true)}
-        ${textarea('__br_expectedResult__', 'expectedResult', 2, 'What should have happened?')}
+      <div class="__br_field">
+        <label for="__br_expectedResult__" class="__br_label">Expected result<span class="__br_required">*</span></label>
+        <textarea id="__br_expectedResult__" name="expectedResult" rows="2"
+          placeholder="What should have happened?" required class="__br_textarea"></textarea>
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('Actual result', '__br_actualResult__', true)}
-        ${textarea('__br_actualResult__', 'actualResult', 2, 'What actually happened?')}
+      <div class="__br_field">
+        <label for="__br_actualResult__" class="__br_label">Actual result<span class="__br_required">*</span></label>
+        <textarea id="__br_actualResult__" name="actualResult" rows="2"
+          placeholder="What actually happened?" required class="__br_textarea"></textarea>
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('Steps to reproduce', '__br_stepsToReproduce__', true)}
-        ${textarea('__br_stepsToReproduce__', 'stepsToReproduce', 4, '1. Go to /login\n2. Enter credentials\n3. Click Submit')}
+      <div class="__br_field">
+        <label for="__br_stepsToReproduce__" class="__br_label">Steps to reproduce<span class="__br_required">*</span></label>
+        <textarea id="__br_stepsToReproduce__" name="stepsToReproduce" rows="4"
+          placeholder="1. Go to /login\n2. Enter credentials\n3. Click Submit" required class="__br_textarea"></textarea>
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('Screenshot (optional)', '__br_screenshot__')}
-        <input id="__br_screenshot__" name="screenshot" type="file" accept="image/png,image/jpeg,image/webp,image/gif"
-          style="display:block;font-size:13px;color:#374151;" />
-        <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">PNG, JPG, WebP or GIF · max 5 MB</p>
+      <div class="__br_field">
+        <label class="__br_label">Screenshot (optional)</label>
+        <div class="__br_screenshot_row">
+          <button id="__br_capture_btn__" type="button" class="__br_capture_btn">📸 Capture screen</button>
+          <span class="__br_or_divider">or</span>
+          <input id="__br_screenshot__" name="screenshot" type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            style="font-size:13px;color:#374151;max-width:200px;" />
+        </div>
+        <input id="__br_capture_data__" type="hidden" value="" />
+        <img id="__br_capture_preview__" alt="Captured screenshot preview"
+          class="__br_capture_preview" style="display:none;" />
+        <p class="__br_hint">PNG, JPG, WebP or GIF · max 5 MB</p>
       </div>
 
-      <div style="margin-bottom:14px;">
-        ${label('Additional notes (optional)', '__br_notes__')}
-        ${textarea('__br_notes__', 'notes', 2, 'Anything else worth mentioning?')}
+      <div class="__br_field">
+        <label for="__br_notes__" class="__br_label">Additional notes (optional)</label>
+        <textarea id="__br_notes__" name="notes" rows="2"
+          placeholder="Anything else worth mentioning?" class="__br_textarea"></textarea>
       </div>
 
       <div id="__bugreport_status__"></div>
 
-      <button id="__bugreport_submit__" type="submit"
-        style="margin-top:16px;width:100%;padding:10px 16px;background:#e11d48;color:#fff;border:none;
-               border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">
+      <button id="__bugreport_submit__" type="submit" class="__br_submit_btn">
         Submit bug report
       </button>
 

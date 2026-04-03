@@ -83,6 +83,14 @@ export function formatIssueBody(
     lines.push('```');
   }
 
+  // ── Failed network requests ────────────────────────────────────────────────
+  if (report.failedNetworkRequests) {
+    lines.push(`\n## Failed network requests\n`);
+    lines.push('```json');
+    lines.push(report.failedNetworkRequests);
+    lines.push('```');
+  }
+
   // ── Notes ──────────────────────────────────────────────────────────────────
   section('Notes', report.notes);
 

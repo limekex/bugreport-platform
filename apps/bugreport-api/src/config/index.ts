@@ -55,6 +55,11 @@ export const config = {
     perUserPerHour: parseInt(optionalEnv('RATE_LIMIT_PER_USER_PER_HOUR', '20'), 10),
     perIpPerHour: parseInt(optionalEnv('RATE_LIMIT_PER_IP_PER_HOUR', '50'), 10),
   },
+
+  redis: {
+    /** Redis connection URL. When set, per-tester rate limiting uses Redis instead of in-memory. */
+    url: optionalEnv('REDIS_URL', ''),
+  },
 } as const;
 
 export type AppConfig = typeof config;

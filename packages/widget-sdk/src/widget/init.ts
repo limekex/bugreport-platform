@@ -3,6 +3,7 @@ import type { WidgetInstance, WidgetEventType, WidgetEventListener } from '../ty
 import { injectFloatingButton, removeFloatingButton } from './button';
 import { openModal, closeModal } from './modal';
 import { installConsoleErrorHook } from '../utils/consoleCapture';
+import { installNetworkCaptureHook } from '../utils/networkCapture';
 
 /**
  * Initialises the bug reporter widget.
@@ -71,6 +72,8 @@ export function initBugReporter(config: BugReporterConfig): WidgetInstance {
     // Install the console.error hook so recent errors are available when the
     // tester opens the modal.
     installConsoleErrorHook();
+    // Install the network capture hook to record failed fetch/XHR requests.
+    installNetworkCaptureHook();
     injectFloatingButton(instance, config.theme);
   }
 

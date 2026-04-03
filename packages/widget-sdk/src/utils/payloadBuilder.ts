@@ -1,6 +1,7 @@
 import type { BugReportRequest } from '@bugreport/shared-types';
 import type { BugReporterConfig } from '@bugreport/shared-types';
 import { getCollectedErrors } from './consoleCapture';
+import { getFailedNetworkRequests } from './networkCapture';
 
 /**
  * Builds the multipart FormData payload for POST /api/reports/bug.
@@ -37,6 +38,8 @@ export function buildReportPayload(
         : undefined,
     // Automatically attach any console errors captured since page load
     optionalClientErrors: getCollectedErrors(),
+    // Automatically attach any failed network requests captured since page load
+    failedNetworkRequests: getFailedNetworkRequests(),
   };
 
   // report fields take priority over context defaults; overrides take priority over everything
