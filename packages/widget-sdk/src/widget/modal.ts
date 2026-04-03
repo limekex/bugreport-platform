@@ -2,7 +2,9 @@ import type { BugReporterConfig } from '@bugreport/shared-types';
 import { buildReportPayload } from '../utils/payloadBuilder';
 import { submitReport } from '../utils/apiClient';
 
+const SUCCESS_AUTO_CLOSE_DELAY_MS = 4000;
 const MODAL_ID = '__bugreport_modal__';
+
 const OVERLAY_ID = '__bugreport_overlay__';
 
 export interface ModalCallbacks {
@@ -155,8 +157,8 @@ function setFormState(form: HTMLFormElement, state: FormState, message?: string)
     );
     statusEl.innerHTML = `✅ Bug report submitted! <a href="${message}" target="_blank" rel="noopener" style="color:#065f46;font-weight:600;">View GitHub issue →</a>`;
 
-    // Auto-close after 4 seconds on success
-    setTimeout(() => closeModal(), 4000);
+    // Auto-close after SUCCESS_AUTO_CLOSE_DELAY_MS on success
+    setTimeout(() => closeModal(), SUCCESS_AUTO_CLOSE_DELAY_MS);
   } else if (state === 'error') {
     submitBtn.textContent = 'Submit bug report';
     statusEl.setAttribute(

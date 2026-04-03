@@ -81,7 +81,7 @@ export function initBugReporter(config: BugReporterConfig): WidgetInstance {
  * 2. If not in a browser context → never render.
  * 3. If `apiBaseUrl` is missing → never render (would fail anyway).
  * 4. If `enabled` is explicitly `true` → always render (consumer opts in).
- * 5. Otherwise render only when environment contains "stage".
+ * 5. Otherwise render only when environment exactly matches an allowed stage value.
  */
 function shouldShowWidget(config: BugReporterConfig): boolean {
   if (config.enabled === false) return false;
@@ -89,6 +89,9 @@ function shouldShowWidget(config: BugReporterConfig): boolean {
   if (!config.apiBaseUrl) return false;
   if (config.enabled === true) return true;
 
+  // Exact-match against known staging environment names to avoid false positives
+  // (e.g. "backstage", "prestage", "stage-production").
+  const STAGE_ENVS = new Set(['stage', 'staging', 'uat', 'test']);
   const env = config.environment?.toLowerCase() ?? '';
-  return env.includes('stage') || env.includes('staging');
+  return STAGE_ENVS.has(env);
 }

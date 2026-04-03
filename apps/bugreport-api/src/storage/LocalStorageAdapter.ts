@@ -6,6 +6,14 @@ import { logger } from '../lib/logger';
 
 const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
 
+/** Allowed upload extensions derived from supported MIME types only. */
+const MIME_TO_EXT: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
 /**
  * Local-disk storage adapter for development.
  *
@@ -20,32 +28,25 @@ const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
  * Replace with CloudStorageAdapter for production.
  */
 export class LocalStorageAdapter implements StorageAdapter {
-  constructor(private readonly baseUrl: string) {}
-
-  async upload(file: StorageFile): Promise<StorageUploadResult> {
+  constructor(private readonly baseUrl: string) {
+    // Ensure the uploads directory exists once at startup rather than per-request.
     if (!fs.existsSync(UPLOADS_DIR)) {
       fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
+  }
 
-    const ext = path.extname(file.originalname) || this.mimeToExt(file.mimetype);
+  async upload(file: StorageFile): Promise<StorageUploadResult> {
+    // Derive extension from the validated MIME type only — never trust the
+    // client-provided filename extension to avoid path injection.
+    const ext = MIME_TO_EXT[file.mimetype] ?? '.bin';
     const filename = `${nanoid()}${ext}`;
     const destPath = path.join(UPLOADS_DIR, filename);
 
-    fs.renameSync(file.tmpPath, destPath);
+    await fs.promises.rename(file.tmpPath, destPath);
 
     const url = `${this.baseUrl.replace(/\/$/, '')}/uploads/${filename}`;
     logger.debug({ key: filename, url }, 'Screenshot saved to local storage');
 
     return { url, key: filename };
-  }
-
-  private mimeToExt(mimetype: string): string {
-    const map: Record<string, string> = {
-      'image/png': '.png',
-      'image/jpeg': '.jpg',
-      'image/webp': '.webp',
-      'image/gif': '.gif',
-    };
-    return map[mimetype] ?? '.bin';
   }
 }
