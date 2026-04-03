@@ -1,21 +1,42 @@
+import { config } from '../config';
 import { logger } from '../lib/logger';
+import type { StorageAdapter } from '../storage/StorageAdapter';
+import { LocalStorageAdapter } from '../storage/LocalStorageAdapter';
+import { CloudStorageAdapter } from '../storage/CloudStorageAdapter';
 
 export interface ScreenshotUploadResult {
-  /** Public URL to the stored screenshot, if available */
+  /** Public URL to the stored screenshot, or null if not publicly accessible */
   url: string | null;
 }
+
+function createAdapter(): StorageAdapter {
+  switch (config.storage.provider) {
+    case 'local':
+      return new LocalStorageAdapter(`http://localhost:${config.port}`);
+    case 's3':
+    case 'r2':
+      // TODO: Pass S3 config to CloudStorageAdapter once implemented
+      return new CloudStorageAdapter();
+    default:
+      logger.warn({ provider: config.storage.provider }, 'Unknown storage provider, falling back to local');
+      return new LocalStorageAdapter(`http://localhost:${config.port}`);
+  }
+}
+
+const adapter: StorageAdapter = createAdapter();
 
 /**
  * Uploads a screenshot file to the configured storage provider.
  *
- * TODO: Implement real S3/R2 upload logic.
- *       For now this is a placeholder that logs the file path and returns null.
+ * Storage behaviour depends on the STORAGE_PROVIDER environment variable:
+ * - `local` — saves to `uploads/` on the local filesystem (dev only)
+ * - `s3` / `r2` — TODO: upload to S3-compatible object storage (see CloudStorageAdapter)
  */
 export async function uploadScreenshot(
   filePath: string,
-  _mimetype: string,
+  mimetype: string,
+  originalname: string,
 ): Promise<ScreenshotUploadResult> {
-  // TODO: Switch on config.storage.provider and upload to S3/R2/local CDN.
-  logger.warn({ filePath }, 'Screenshot upload is not yet implemented (placeholder)');
-  return { url: null };
+  const result = await adapter.upload({ tmpPath: filePath, mimetype, originalname });
+  return { url: result.url };
 }

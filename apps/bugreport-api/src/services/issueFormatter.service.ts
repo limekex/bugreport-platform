@@ -5,8 +5,13 @@ import { BugReportInput } from '../schemas/bugReport.schema';
  *
  * The template is kept in sync with docs/ISSUE_FORMAT.md.
  */
-export function formatIssueBody(report: BugReportInput, screenshotUrl?: string): string {
+export function formatIssueBody(
+  report: BugReportInput,
+  screenshotUrl?: string,
+  timestamp?: string,
+): string {
   const lines: string[] = [];
+  const ts = timestamp ?? new Date().toISOString();
 
   const field = (label: string, value?: string) => {
     if (value) lines.push(`**${label}:** ${value}`);
@@ -30,11 +35,12 @@ export function formatIssueBody(report: BugReportInput, screenshotUrl?: string):
   field('Build number', report.buildNumber);
   field('Page URL', report.pageUrl);
   field('Route', report.route);
+  lines.push(`**Timestamp:** ${ts}`);
 
   // ── Reporter ───────────────────────────────────────────────────────────────
   lines.push(`\n## Reporter\n`);
-  field('Tester ID', report.testerId);
-  field('Tester role', report.testerRole);
+  lines.push(`**Tester ID:** ${report.testerId ?? 'unknown'}`);
+  lines.push(`**Tester role:** ${report.testerRole ?? 'unknown'}`);
   field('Contact email', report.contactEmail);
 
   // ── Severity ───────────────────────────────────────────────────────────────
@@ -62,9 +68,11 @@ export function formatIssueBody(report: BugReportInput, screenshotUrl?: string):
   field('Trace ID', report.traceId);
 
   // ── Screenshot ─────────────────────────────────────────────────────────────
+  lines.push(`\n## Screenshot\n`);
   if (screenshotUrl) {
-    lines.push(`\n## Screenshot\n`);
     lines.push(`![Screenshot](${screenshotUrl})`);
+  } else {
+    lines.push('No screenshot attached');
   }
 
   // ── Optional client errors ─────────────────────────────────────────────────

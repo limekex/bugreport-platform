@@ -22,7 +22,7 @@ describe('formatIssueTitle', () => {
 
 describe('formatIssueBody', () => {
   it('includes all required sections', () => {
-    const body = formatIssueBody(base);
+    const body = formatIssueBody(base, undefined, '2024-01-01T00:00:00.000Z');
     expect(body).toContain('## Summary');
     expect(body).toContain('Login button does nothing');
     expect(body).toContain('## Severity');
@@ -33,14 +33,42 @@ describe('formatIssueBody', () => {
     expect(body).toContain('## Steps to reproduce');
   });
 
+  it('includes the provided timestamp in the Environment section', () => {
+    const ts = '2024-06-15T10:30:00.000Z';
+    const body = formatIssueBody(base, undefined, ts);
+    expect(body).toContain(`**Timestamp:** ${ts}`);
+  });
+
+  it('generates a timestamp automatically when none is provided', () => {
+    const body = formatIssueBody(base);
+    expect(body).toContain('**Timestamp:**');
+  });
+
+  it('shows "unknown" for tester ID and role when not provided', () => {
+    const body = formatIssueBody(base, undefined, '2024-01-01T00:00:00.000Z');
+    expect(body).toContain('**Tester ID:** unknown');
+    expect(body).toContain('**Tester role:** unknown');
+  });
+
+  it('shows the provided tester ID and role', () => {
+    const body = formatIssueBody(
+      { ...base, testerId: 'tester-001', testerRole: 'qa' },
+      undefined,
+      '2024-01-01T00:00:00.000Z',
+    );
+    expect(body).toContain('**Tester ID:** tester-001');
+    expect(body).toContain('**Tester role:** qa');
+  });
+
   it('includes screenshot when provided', () => {
-    const body = formatIssueBody(base, 'https://cdn.example.com/screenshot.png');
+    const body = formatIssueBody(base, 'https://cdn.example.com/screenshot.png', '2024-01-01T00:00:00.000Z');
     expect(body).toContain('## Screenshot');
     expect(body).toContain('![Screenshot](https://cdn.example.com/screenshot.png)');
   });
 
-  it('omits screenshot section when not provided', () => {
-    const body = formatIssueBody(base);
-    expect(body).not.toContain('## Screenshot');
+  it('shows "No screenshot attached" when no screenshot is provided', () => {
+    const body = formatIssueBody(base, undefined, '2024-01-01T00:00:00.000Z');
+    expect(body).toContain('## Screenshot');
+    expect(body).toContain('No screenshot attached');
   });
 });

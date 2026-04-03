@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import pinoHttp from 'pino-http';
+import path from 'path';
 import { config } from './config';
 import { logger } from './lib/logger';
 import { healthRouter } from './routes/health.routes';
@@ -46,6 +47,19 @@ export function createApp() {
 
   // ── IP rate limiter ─────────────────────────────────────────────────────────
   app.use(ipRateLimiter);
+
+  // ── Static uploads (local dev only) ────────────────────────────────────────
+  // In production, screenshots are served from S3/R2. In local mode, the API
+  // serves the `uploads/` directory so screenshot URLs in GitHub issues work
+  // during local development.
+  if (config.storage.provider === 'local') {
+    const uploadsDir = path.resolve(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    app.use('/uploads', express.static(uploadsDir));
+    logger.debug({ uploadsDir }, 'Serving local uploads directory');
+  }
 
   // ── Routes ──────────────────────────────────────────────────────────────────
   app.use('/health', healthRouter);

@@ -1,4 +1,8 @@
-# Copilot Coding Agent — Master Prompt
+> **Historical document.** This file was the original Copilot agent prompt used to bootstrap the project. The detailed specifications have since been split into dedicated docs under `/docs`. Refer to those files as the primary source of truth. This file is retained for context.
+
+---
+
+
 
 You are implementing a **Stage Bug Reporting Widget** system for a web application.
 
