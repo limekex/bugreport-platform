@@ -43,6 +43,8 @@ export const config = {
     endpoint: optionalEnv('STORAGE_ENDPOINT', ''),
     accessKey: optionalEnv('STORAGE_ACCESS_KEY', ''),
     secretKey: optionalEnv('STORAGE_SECRET_KEY', ''),
+    publicUrlBase: optionalEnv('STORAGE_PUBLIC_URL_BASE', ''),
+    signedUrlExpires: parseInt(optionalEnv('STORAGE_SIGNED_URL_EXPIRES', '604800'), 10),
   },
 
   upload: {
@@ -52,6 +54,11 @@ export const config = {
   rateLimit: {
     perUserPerHour: parseInt(optionalEnv('RATE_LIMIT_PER_USER_PER_HOUR', '20'), 10),
     perIpPerHour: parseInt(optionalEnv('RATE_LIMIT_PER_IP_PER_HOUR', '50'), 10),
+  },
+
+  redis: {
+    /** Redis connection URL. When set, per-tester rate limiting uses Redis instead of in-memory. */
+    url: optionalEnv('REDIS_URL', ''),
   },
 } as const;
 

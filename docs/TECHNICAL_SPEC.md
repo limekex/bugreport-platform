@@ -44,76 +44,11 @@ This solution is **not** intended to replicate the full Marker.io feature set in
 
 ## Recommended Architecture
 
-## Decision
+> The full architecture rationale (decision record, system diagram, and embed-script extension path) is documented in [`ARCHITECTURE_DECISION.md`](ARCHITECTURE_DECISION.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-**Recommended approach for v1: integrate the widget into the stage app frontend, but keep the reporting backend as a separate service.**
-
-This gives the best balance of:
-- low friction for testers
-- reuse of app context already available inside stage
-- security isolation for GitHub credentials
-- future reusability across multiple stage apps
-
-### Why this is the recommended model
-1. The widget needs direct access to app context:
-   - current route
-   - build/version
-   - logged-in test user or role
-   - frontend errors or relevant trace IDs
-   - browser state
-2. GitHub credentials must never live in the frontend.
-3. A separate backend service makes the solution portable if additional apps or staging environments are added later.
-4. The stage app can load the widget as:
-   - an internal component, or
-   - a small embeddable SDK package that points to the reporting API
-
-### Recommended deployment model
-- **Frontend widget**: embedded inside the stage application
-- **Backend reporting API**: separate service on its own subdomain, for example:
-  - `https://bugreport-api.example.com`
-- **Optional uploaded screenshot storage**:
-  - S3-compatible bucket, or server filesystem in early development
-- **GitHub**:
-  - target repo issues via API
-
-### Alternative models considered
-
-#### A. Fully separate external app on its own domain
-Example:
-- tester clicks “Report bug”
-- modal or popup opens external app
-- tester fills form there
-
-Pros:
-- strong separation
-- reusable across many apps
-
-Cons:
-- poor UX
-- harder to capture in-page context and screenshots
-- more friction for test users
-
-**Not recommended for v1.**
-
-#### B. Fully integrated in stage app, no separate backend service
-Pros:
-- simple deployment
-
-Cons:
-- dangerous because GitHub tokens would need unsafe exposure or proxying through the main app backend
-- harder to isolate responsibility
-- less reusable later
-
-**Not recommended unless the existing stage backend already has a secure server environment and API surface suitable for this feature.**
-
-### Best practical design
-Use a **hybrid model**:
-- widget rendered inside stage app
-- widget communicates with a dedicated backend service
-- dedicated backend service creates GitHub issues
+**Summary:** embed the widget inside the stage app; run the bug-reporting backend as a separate service. GitHub credentials live only in the backend.
 
 ---
-
 ## System Components
 
 1. **Stage Widget Frontend**
@@ -403,64 +338,10 @@ See `ISSUE_BODY_TEMPLATE.md` below.
 
 ---
 
-## Recommended Issue Body Template
+## Issue body template
 
-```md
-## Summary
-<short summary>
-
-## Environment
-- Environment: stage
-- App version: <version>
-- Commit: <sha>
-- Build: <build number>
-- URL: <url>
-- Route: <route>
-- Timestamp: <iso timestamp>
-
-## Reporter
-- Tester ID: <tester id or unknown>
-- Tester role: <role or unknown>
-- Contact: <email or omitted>
-
-## Severity
-<severity>
-
-## What happened
-<actual user description>
-
-## Expected result
-<expected behavior>
-
-## Actual result
-<actual behavior>
-
-## Steps to reproduce
-1. ...
-2. ...
-3. ...
-
-## Technical context
-- Browser: <browser>
-- OS: <os>
-- Viewport: <width>x<height>
-- Locale: <locale>
-- User agent: <ua>
-- Trace ID: <trace id if available>
-
-## Screenshot
-<image link or "No screenshot attached">
-
-## Optional client errors
-```text
-<sanitized console error summary>
-```
-
-## Notes
-<additional notes or omitted>
-```
-
----
+> See [`ISSUE_FORMAT.md`](ISSUE_FORMAT.md) for the exact title format, label set, and body template.
+> See [`ISSUE_BODY_TEMPLATE.md`](ISSUE_BODY_TEMPLATE.md) for the standalone template block.
 
 ## Suggested GitHub Issue Form Template
 
@@ -473,17 +354,13 @@ See accompanying file in this package.
 
 ## Security Requirements
 
+> Full security model is documented in [`SECURITY.md`](SECURITY.md).
+
+Key rules:
 - Never expose GitHub credentials in frontend code
 - Strict CORS allowlist to stage domains only
-- Sanitize markdown and text fields
-- Strip scripts, HTML, and dangerous content from user fields
-- Validate file type and file size server-side
-- Store screenshots with randomized object keys
-- Use signed or private URLs if screenshots may contain sensitive data
-- Log only sanitized metadata
-- Keep retention policy configurable for uploaded screenshots
-
----
+- Sanitise text fields; validate file type and size server-side
+- Log only sanitised metadata; redact tokens from Pino output
 
 ## Configuration
 
@@ -631,31 +508,9 @@ Recommended:
 
 ---
 
-## Suggested Milestones
+## Milestones
 
-### Milestone 1 — MVP
-- widget UI
-- backend API
-- GitHub issue creation
-- screenshot upload
-- stage-only visibility
-- labels and issue format
-
-### Milestone 2 — Hardening
-- better auth
-- improved screenshot capture
-- optional internal audit DB
-- retry logic
-- better admin configuration
-
-### Milestone 3 — Advanced reporting
-- console error excerpts
-- trace links
-- optional Sentry linking
-- richer browser classification
-- bulk duplicate detection ideas
-
----
+> See [`ROADMAP.md`](ROADMAP.md) for the full milestone checklist and future backlog.
 
 ## Non-Goals
 

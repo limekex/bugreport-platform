@@ -45,6 +45,9 @@ export interface BugReportRequest {
   // Optional client-side errors (JSON string of Error[] or similar)
   optionalClientErrors?: string;
 
+  // Optional failed network requests (JSON string of FailedNetworkEntry[])
+  failedNetworkRequests?: string;
+
   // Screenshot is handled as a multipart File field by the transport layer.
   // It is intentionally omitted from the plain-object type.
 }

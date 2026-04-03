@@ -2,15 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { nanoid } from 'nanoid';
 import { bugReportSchema } from '../schemas/bugReport.schema';
 import { formatIssueBody, formatIssueTitle } from '../services/issueFormatter.service';
+import { buildLabels } from '../services/labelBuilder.service';
 import { createGitHubIssue } from '../services/github.service';
 import { uploadScreenshot } from '../services/storage.service';
 import { config } from '../config';
 import { logger } from '../lib/logger';
-import type { BugSeverity, IssueSeverityLabel, IssueLabel } from '@bugreport/shared-types';
-
-function severityLabel(severity: BugSeverity): IssueSeverityLabel {
-  return `severity:${severity}`;
-}
 
 export async function submitBugReport(req: Request, res: Response, next: NextFunction) {
   try {
@@ -27,22 +23,22 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
 
     const report = parsed.data;
     const reportId = nanoid();
+    const timestamp = new Date().toISOString();
 
     // 2. Handle optional screenshot upload
     let screenshotUrl: string | undefined;
     const file = req.file;
     if (file) {
-      const result = await uploadScreenshot(file.path, file.mimetype);
+      const result = await uploadScreenshot(file.path, file.mimetype, file.originalname);
       screenshotUrl = result.url ?? undefined;
     }
 
     // 3. Format issue body and title
     const title = formatIssueTitle(report.summary);
-    const body = formatIssueBody(report, screenshotUrl);
+    const body = formatIssueBody(report, screenshotUrl, timestamp);
 
     // 4. Build label list
-    const defaultLabels = config.github.defaultLabels as IssueLabel[];
-    const labels: IssueLabel[] = [...defaultLabels, severityLabel(report.severity)];
+    const labels = buildLabels(report.severity, config.github.defaultLabels);
 
     // 5. Create GitHub issue
     const { issueNumber, issueUrl } = await createGitHubIssue({ title, body, labels });

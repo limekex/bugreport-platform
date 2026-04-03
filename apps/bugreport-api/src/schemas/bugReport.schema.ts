@@ -34,6 +34,9 @@ export const bugReportSchema = z.object({
 
   // Client-side errors as a JSON string
   optionalClientErrors: z.string().max(10000).optional(),
+
+  // Failed network requests as a JSON string
+  failedNetworkRequests: z.string().max(10000).optional(),
 });
 
 export type BugReportInput = z.infer<typeof bugReportSchema>;
