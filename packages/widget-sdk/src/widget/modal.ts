@@ -28,8 +28,9 @@ export interface ModalCallbacks {
  *
  * TODO: Replace this stub with the real modal implementation.
  */
-export function openModal(_callbacks: ModalCallbacks): void {
-  // TODO: render the modal UI
+export function openModal(callbacks: ModalCallbacks): void {
+  // TODO: render the modal UI using the callbacks
+  void callbacks;
   console.warn('[BugReporter] Modal UI not yet implemented.');
 }
 

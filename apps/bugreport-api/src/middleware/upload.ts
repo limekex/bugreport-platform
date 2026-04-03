@@ -1,5 +1,6 @@
 import multer from 'multer';
 import path from 'path';
+import { nanoid } from 'nanoid';
 import { config } from '../config';
 
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -10,7 +11,7 @@ const storage = multer.diskStorage({
   },
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    cb(null, `${nanoid()}${ext}`);
   },
 });
 
