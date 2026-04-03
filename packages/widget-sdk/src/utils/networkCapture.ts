@@ -107,7 +107,7 @@ export function installNetworkCaptureHook(): void {
       });
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (originalOpen as any).call(this, method, url, ...rest);
+      return (originalOpen as (...args: unknown[]) => void).call(this, method, url, ...rest);
     };
   }
 

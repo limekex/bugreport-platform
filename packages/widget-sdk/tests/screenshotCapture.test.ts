@@ -12,7 +12,7 @@ describe('capturePageScreenshot', () => {
     // injection will time out, so capturePageScreenshot should return null.
     const result = await capturePageScreenshot();
     expect(result).toBeNull();
-  }, 10000);
+  }, 5000);
 
   it('returns a data URL when html2canvas is available on window', async () => {
     // Mock html2canvas on window

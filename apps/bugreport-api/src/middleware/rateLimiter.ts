@@ -97,12 +97,20 @@ class RedisTesterStore implements TesterRateLimitStore {
     const ttlSeconds = Math.ceil(WINDOW_MS / 1000);
 
     try {
-      const count = await this.client.incr(key);
-      // Set expiry only on the first increment (count === 1)
-      if (count === 1) {
-        await this.client.expire(key, ttlSeconds);
-      }
-      return count;
+      // Atomic increment-with-expiry using a Lua script to avoid race conditions
+      // between INCR and EXPIRE (if the process crashes between the two calls,
+      // the key would never expire).
+      const result = await this.client.eval(
+        `local count = redis.call('INCR', KEYS[1])
+         if count == 1 then
+           redis.call('EXPIRE', KEYS[1], ARGV[1])
+         end
+         return count`,
+        1,
+        key,
+        ttlSeconds,
+      );
+      return result as number;
     } catch (err) {
       logger.warn({ err, testerId }, 'Redis tester rate limit error — allowing request');
       // Fail open: don't block requests if Redis is down
