@@ -15,19 +15,21 @@ This roadmap is inspired by the feature set of tools like Marker.io, adapted to 
 - [x] Widget SDK: floating trigger button (DOM-based)
 - [x] Widget SDK: payload builder with browser context
 - [x] Widget SDK: API client
-- [ ] Widget SDK: real modal UI
-- [ ] Screenshot storage: S3 / Cloudflare R2 integration
-- [ ] CI: GitHub Actions workflow
-- [ ] GitHub labels: create labels in target repository
+- [x] Widget SDK: real modal UI (DOM-based, all required fields)
+- [x] Screenshot storage: `LocalStorageAdapter` (dev) + `CloudStorageAdapter` (S3/R2)
+- [x] Per-tester rate limiting (in-memory sliding window, alongside IP limiter)
+- [x] Console error capture (`installConsoleErrorHook` + auto-attach to payload)
+- [x] CI: GitHub Actions workflow (typecheck + test + lint)
+- [x] GitHub labels: `scripts/create-github-labels.sh` helper script
 
 ---
 
 ## Next
 
-- [ ] **Per-tester rate limiting** — rate limit by `testerId` in addition to IP
+- [x] **Per-tester rate limiting** — rate limit by `testerId` in addition to IP ✅
+- [x] **Console error capture** — auto-attach recent `console.error` calls to the report ✅
 - [ ] **Tester allow-listing** — optionally restrict submissions to a set of known tester IDs
 - [ ] **Widget modal UI polish** — styled form with React (Headless UI or Radix)
-- [ ] **Console error capture** — auto-attach recent `console.error` calls to the report
 - [ ] **Failed network request summary** — capture XHR/fetch errors via `PerformanceObserver`
 - [ ] **Full-page screenshot** — use `html2canvas` or similar to capture a full-page snapshot
 

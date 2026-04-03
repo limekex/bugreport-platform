@@ -43,6 +43,8 @@ export const config = {
     endpoint: optionalEnv('STORAGE_ENDPOINT', ''),
     accessKey: optionalEnv('STORAGE_ACCESS_KEY', ''),
     secretKey: optionalEnv('STORAGE_SECRET_KEY', ''),
+    publicUrlBase: optionalEnv('STORAGE_PUBLIC_URL_BASE', ''),
+    signedUrlExpires: parseInt(optionalEnv('STORAGE_SIGNED_URL_EXPIRES', '604800'), 10),
   },
 
   upload: {

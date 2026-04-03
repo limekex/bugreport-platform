@@ -2,6 +2,7 @@ import type { BugReporterConfig } from '@bugreport/shared-types';
 import type { WidgetInstance, WidgetEventType, WidgetEventListener } from '../types/widget.types';
 import { injectFloatingButton, removeFloatingButton } from './button';
 import { openModal, closeModal } from './modal';
+import { installConsoleErrorHook } from '../utils/consoleCapture';
 
 /**
  * Initialises the bug reporter widget.
@@ -67,6 +68,9 @@ export function initBugReporter(config: BugReporterConfig): WidgetInstance {
   const shouldRender = shouldShowWidget(config);
 
   if (shouldRender) {
+    // Install the console.error hook so recent errors are available when the
+    // tester opens the modal.
+    installConsoleErrorHook();
     injectFloatingButton(instance, config.theme);
   }
 

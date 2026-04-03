@@ -15,8 +15,15 @@ function createAdapter(): StorageAdapter {
       return new LocalStorageAdapter(`http://localhost:${config.port}`);
     case 's3':
     case 'r2':
-      // TODO: Pass S3 config to CloudStorageAdapter once implemented
-      return new CloudStorageAdapter();
+      return new CloudStorageAdapter({
+        bucket: config.storage.bucket,
+        region: config.storage.region,
+        endpoint: config.storage.endpoint || undefined,
+        accessKeyId: config.storage.accessKey,
+        secretAccessKey: config.storage.secretKey,
+        publicUrlBase: config.storage.publicUrlBase || undefined,
+        signedUrlExpiresIn: config.storage.signedUrlExpires,
+      });
     default:
       logger.warn({ provider: config.storage.provider }, 'Unknown storage provider, falling back to local');
       return new LocalStorageAdapter(`http://localhost:${config.port}`);
@@ -30,7 +37,7 @@ const adapter: StorageAdapter = createAdapter();
  *
  * Storage behaviour depends on the STORAGE_PROVIDER environment variable:
  * - `local` — saves to `uploads/` on the local filesystem (dev only)
- * - `s3` / `r2` — TODO: upload to S3-compatible object storage (see CloudStorageAdapter)
+ * - `s3` / `r2` — uploads to S3-compatible object storage via CloudStorageAdapter
  */
 export async function uploadScreenshot(
   filePath: string,
