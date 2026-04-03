@@ -51,12 +51,10 @@ export function createApp() {
   // ── Static uploads (local dev only) ────────────────────────────────────────
   // In production, screenshots are served from S3/R2. In local mode, the API
   // serves the `uploads/` directory so screenshot URLs in GitHub issues work
-  // during local development.
+  // during local development. The LocalStorageAdapter creates the directory on
+  // startup — we only need to mount the static route here.
   if (config.storage.provider === 'local') {
     const uploadsDir = path.resolve(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
     app.use('/uploads', express.static(uploadsDir));
     logger.debug({ uploadsDir }, 'Serving local uploads directory');
   }

@@ -40,7 +40,12 @@ export class LocalStorageAdapter implements StorageAdapter {
     // client-provided filename extension to avoid path injection.
     const ext = MIME_TO_EXT[file.mimetype] ?? '.bin';
     const filename = `${nanoid()}${ext}`;
-    const destPath = path.join(UPLOADS_DIR, filename);
+    const destPath = path.resolve(UPLOADS_DIR, filename);
+
+    // Safety check: ensure the resolved destination stays within UPLOADS_DIR
+    if (!destPath.startsWith(UPLOADS_DIR + path.sep) && destPath !== UPLOADS_DIR) {
+      throw new Error('Storage path traversal detected');
+    }
 
     await fs.promises.rename(file.tmpPath, destPath);
 

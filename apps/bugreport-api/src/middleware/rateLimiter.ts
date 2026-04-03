@@ -36,13 +36,28 @@ interface TesterWindow {
 const testerWindows = new Map<string, TesterWindow>();
 const WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-/** Prune expired windows periodically to avoid unbounded memory growth */
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, win] of testerWindows) {
-    if (now >= win.resetAt) testerWindows.delete(key);
+/** Lazy-started cleanup interval; only runs once the first tester entry is created. */
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+function ensureCleanupRunning(): void {
+  if (cleanupInterval !== null) return;
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, win] of testerWindows) {
+      if (now >= win.resetAt) testerWindows.delete(key);
+    }
+    // Stop the interval when the map is empty to avoid unnecessary work
+    if (testerWindows.size === 0) {
+      clearInterval(cleanupInterval!);
+      cleanupInterval = null;
+    }
+  }, 10 * 60 * 1000); // every 10 minutes
+
+  // Allow the process to exit even if the interval is active
+  if (typeof cleanupInterval === 'object' && cleanupInterval.unref) {
+    cleanupInterval.unref();
   }
-}, 10 * 60 * 1000); // every 10 minutes
+}
 
 export function testerRateLimiter(req: Request, res: Response, next: NextFunction): void {
   // testerId arrives as a multipart form field — already parsed by multer
@@ -60,6 +75,7 @@ export function testerRateLimiter(req: Request, res: Response, next: NextFunctio
   if (!win || now >= win.resetAt) {
     win = { count: 0, resetAt: now + WINDOW_MS };
     testerWindows.set(testerId, win);
+    ensureCleanupRunning();
   }
 
   win.count += 1;

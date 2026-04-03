@@ -1,6 +1,8 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import { nanoid } from 'nanoid';
 import { logger } from '../lib/logger';
 import type { StorageAdapter, StorageFile, StorageUploadResult } from './StorageAdapter';
@@ -91,7 +93,16 @@ export class CloudStorageAdapter implements StorageAdapter {
     const ext = MIME_TO_EXT[file.mimetype] ?? '.bin';
     const key = `screenshots/${nanoid()}${ext}`;
 
-    const fileBuffer = await fs.promises.readFile(file.tmpPath);
+    // Resolve to absolute path and verify it doesn't escape the system temp dir.
+    // tmpPath is set by multer using our nanoid-based filename callback so it
+    // should always be within the configured tmp/ directory.
+    const resolvedTmp = path.resolve(file.tmpPath);
+    const expectedBase = path.resolve('tmp');
+    if (!resolvedTmp.startsWith(expectedBase + path.sep) && !resolvedTmp.startsWith(os.tmpdir())) {
+      throw new Error('Unexpected upload temp path');
+    }
+
+    const fileBuffer = await fs.promises.readFile(resolvedTmp);
 
     await this.client.send(
       new PutObjectCommand({
@@ -105,7 +116,7 @@ export class CloudStorageAdapter implements StorageAdapter {
     );
 
     // Clean up the temp file after successful upload
-    await fs.promises.unlink(file.tmpPath).catch((err: Error) => {
+    await fs.promises.unlink(resolvedTmp).catch((err: Error) => {
       logger.warn({ err, tmpPath: file.tmpPath }, 'Failed to delete temp file after S3 upload');
     });
 
