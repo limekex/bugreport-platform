@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { timingSafeEqual } from 'crypto';
 import { config } from '../config';
 
 /**
@@ -23,7 +24,11 @@ export function adminAuth(req: Request, res: Response, next: NextFunction) {
 
   const providedKey = req.headers['x-api-key'];
 
-  if (!providedKey || providedKey !== configuredKey) {
+  if (
+    typeof providedKey !== 'string' ||
+    providedKey.length !== configuredKey.length ||
+    !timingSafeEqual(Buffer.from(providedKey), Buffer.from(configuredKey))
+  ) {
     res.status(401).json({ success: false, error: 'Invalid or missing API key' });
     return;
   }

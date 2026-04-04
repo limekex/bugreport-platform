@@ -1,4 +1,5 @@
 import fs from 'fs';
+import fsp from 'fs/promises';
 import path from 'path';
 import { nanoid } from 'nanoid';
 import type {
@@ -36,7 +37,11 @@ export function initDomainMappingStore(): void {
 }
 
 function persist(): void {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(mappings, null, 2), 'utf-8');
+  // Fire-and-forget async write to avoid blocking the event loop.
+  // The in-memory array is the source of truth; the file is a durable backup.
+  fsp
+    .writeFile(DATA_FILE, JSON.stringify(mappings, null, 2), 'utf-8')
+    .catch((err) => logger.error({ err }, 'Failed to persist domain mappings'));
 }
 
 // ── Queries ──────────────────────────────────────────────────────────────────
