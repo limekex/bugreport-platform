@@ -1,5 +1,4 @@
-import type { BugReportRequest } from '@bugreport/shared-types';
-import type { BugReporterConfig } from '@bugreport/shared-types';
+import type { BugReportRequest, BugReporterConfig } from '../types/shared.types';
 import { getCollectedErrors } from './consoleCapture';
 import { getFailedNetworkRequests } from './networkCapture';
 

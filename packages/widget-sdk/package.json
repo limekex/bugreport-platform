@@ -1,14 +1,33 @@
 {
-  "name": "@bugreport/widget-sdk",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Browser SDK for embedding the Stage Bug Reporter widget into stage apps",
+  "name": "@limekex/bugreport-widget-sdk",
+  "version": "0.1.2",
+  "description": "Browser SDK for embedding the Stage Bug Reporter widget into staging/UAT applications",
+  "keywords": [
+    "bug-reporter",
+    "bug-tracking",
+    "staging",
+    "testing",
+    "github-issues",
+    "qa",
+    "uat"
+  ],
+  "author": "limekex",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/limekex/bugreport-platform.git",
+    "directory": "packages/widget-sdk"
+  },
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
@@ -20,9 +39,6 @@
     "dev": "tsc --watch --noEmit",
     "test": "vitest run",
     "lint": "eslint \"src/**/*.ts\""
-  },
-  "dependencies": {
-    "@bugreport/shared-types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",

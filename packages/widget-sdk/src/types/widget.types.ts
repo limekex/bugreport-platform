@@ -1,4 +1,4 @@
-import type { BugReporterConfig } from '@bugreport/shared-types';
+import type { BugReporterConfig } from './shared.types';
 
 export type WidgetState = 'idle' | 'open' | 'submitting' | 'success' | 'error';
 

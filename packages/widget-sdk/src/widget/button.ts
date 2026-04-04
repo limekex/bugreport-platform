@@ -1,5 +1,5 @@
 import type { WidgetInstance } from '../types/widget.types';
-import type { WidgetTheme } from '@bugreport/shared-types';
+import type { WidgetTheme } from '../types/shared.types';
 
 const BUTTON_ID = '__bugreport_floating_btn__';
 

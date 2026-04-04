@@ -1,4 +1,4 @@
-import type { BugReporterConfig } from '@bugreport/shared-types';
+import type { BugReporterConfig } from '../types/shared.types';
 import { buildReportPayload } from '../utils/payloadBuilder';
 import { submitReport } from '../utils/apiClient';
 import { capturePageScreenshot } from '../utils/screenshotCapture';

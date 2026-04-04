@@ -25,8 +25,6 @@ type Html2CanvasFunction = (
 ) => Promise<HTMLCanvasElement>;
 
 const CDN_URL = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-/** Subresource Integrity hash for html2canvas 1.4.1 from jsdelivr */
-const CDN_INTEGRITY = 'sha256-6IAfMRH9C/fLcuGGwCmMWi4svMLOHR0/5QL8IBLuVJo=';
 
 let cachedHtml2Canvas: Html2CanvasFunction | null = null;
 
@@ -52,7 +50,6 @@ async function loadHtml2Canvas(): Promise<Html2CanvasFunction | null> {
     await new Promise<void>((resolve, reject) => {
       const script = document.createElement('script');
       script.src = CDN_URL;
-      script.integrity = CDN_INTEGRITY;
       script.crossOrigin = 'anonymous';
       script.async = true;
       const timeout = setTimeout(() => {

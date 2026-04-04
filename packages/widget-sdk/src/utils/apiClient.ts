@@ -1,4 +1,4 @@
-import type { BugReportSuccessResponse, BugReportErrorResponse } from '@bugreport/shared-types';
+import type { BugReportSuccessResponse, BugReportErrorResponse } from '../types/shared.types';
 
 export interface SubmitReportOptions {
   apiBaseUrl: string;

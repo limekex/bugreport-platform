@@ -1,4 +1,4 @@
-import type { BugReporterConfig } from '@bugreport/shared-types';
+import type { BugReporterConfig } from '../types/shared.types';
 import type { WidgetInstance, WidgetEventType, WidgetEventListener } from '../types/widget.types';
 import { injectFloatingButton, removeFloatingButton } from './button';
 import { openModal, closeModal } from './modal';
