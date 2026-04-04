@@ -3,9 +3,10 @@ import { nanoid } from 'nanoid';
 import { bugReportSchema } from '../schemas/bugReport.schema';
 import { formatIssueBody, formatIssueTitle } from '../services/issueFormatter.service';
 import { buildLabels } from '../services/labelBuilder.service';
-import { createGitHubIssue } from '../services/github.service';
+import { createGitHubIssue, GitHubTarget } from '../services/github.service';
 import { uploadScreenshot } from '../services/storage.service';
 import { config } from '../config';
+import { getMappingByOrigin } from '../store/domainMappingStore';
 import { logger } from '../lib/logger';
 
 export async function submitBugReport(req: Request, res: Response, next: NextFunction) {
@@ -25,7 +26,23 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
     const reportId = nanoid();
     const timestamp = new Date().toISOString();
 
-    // 2. Handle optional screenshot upload
+    // 2. Resolve GitHub target from the request origin (domain mapping)
+    const origin = req.headers.origin;
+    const mapping = origin ? getMappingByOrigin(origin) : undefined;
+
+    let target: GitHubTarget | undefined;
+    let defaultLabels = config.github.defaultLabels;
+
+    if (mapping) {
+      target = {
+        owner: mapping.githubOwner,
+        repo: mapping.githubRepo,
+        token: mapping.githubToken,
+      };
+      defaultLabels = mapping.defaultLabels;
+    }
+
+    // 3. Handle optional screenshot upload
     let screenshotUrl: string | undefined;
     const file = req.file;
     if (file) {
@@ -33,15 +50,15 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
       screenshotUrl = result.url ?? undefined;
     }
 
-    // 3. Format issue body and title
+    // 4. Format issue body and title
     const title = formatIssueTitle(report.summary);
     const body = formatIssueBody(report, screenshotUrl, timestamp);
 
-    // 4. Build label list
-    const labels = buildLabels(report.severity, config.github.defaultLabels);
+    // 5. Build label list
+    const labels = buildLabels(report.severity, defaultLabels);
 
-    // 5. Create GitHub issue
-    const { issueNumber, issueUrl } = await createGitHubIssue({ title, body, labels });
+    // 6. Create GitHub issue
+    const { issueNumber, issueUrl } = await createGitHubIssue({ title, body, labels }, target);
 
     logger.info({ reportId, issueNumber, issueUrl }, 'Bug report submitted successfully');
 

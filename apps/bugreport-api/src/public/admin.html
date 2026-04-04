@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bug Report — Domain Mappings</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f3f4f6; color: #111827; line-height: 1.5;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+
+    /* ── Auth bar ──────────────────────────────────────────────────── */
+    .auth-bar {
+      display: flex; gap: .5rem; margin-bottom: 1.5rem; align-items: center;
+    }
+    .auth-bar input {
+      flex: 1; padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: .375rem;
+      font-size: .875rem;
+    }
+    .auth-bar button {
+      padding: .5rem 1rem; background: #2563eb; color: #fff; border: none;
+      border-radius: .375rem; cursor: pointer; font-size: .875rem; white-space: nowrap;
+    }
+    .auth-bar button:hover { background: #1d4ed8; }
+
+    /* ── Table ─────────────────────────────────────────────────────── */
+    table {
+      width: 100%; border-collapse: collapse; background: #fff;
+      border-radius: .5rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1);
+      margin-bottom: 1.5rem;
+    }
+    th, td { text-align: left; padding: .625rem .75rem; font-size: .8125rem; }
+    th { background: #f9fafb; font-weight: 600; color: #6b7280; text-transform: uppercase; font-size: .6875rem; letter-spacing: .05em; }
+    tr:not(:last-child) td { border-bottom: 1px solid #f3f4f6; }
+
+    .actions { display: flex; gap: .375rem; }
+    .btn-sm {
+      padding: .25rem .5rem; font-size: .75rem; border: none; border-radius: .25rem;
+      cursor: pointer; color: #fff;
+    }
+    .btn-edit { background: #f59e0b; }
+    .btn-edit:hover { background: #d97706; }
+    .btn-delete { background: #ef4444; }
+    .btn-delete:hover { background: #dc2626; }
+
+    .btn-add {
+      padding: .5rem 1rem; background: #10b981; color: #fff; border: none;
+      border-radius: .375rem; cursor: pointer; font-size: .875rem; margin-bottom: 1rem;
+    }
+    .btn-add:hover { background: #059669; }
+
+    /* ── Modal ─────────────────────────────────────────────────────── */
+    .overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+      justify-content: center; align-items: center; z-index: 1000;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: .5rem; padding: 1.5rem; width: 480px;
+      max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+    .modal h2 { font-size: 1.125rem; margin-bottom: 1rem; }
+    .field { margin-bottom: .75rem; }
+    .field label { display: block; font-size: .75rem; font-weight: 600; color: #6b7280; margin-bottom: .25rem; }
+    .field input {
+      width: 100%; padding: .5rem .75rem; border: 1px solid #d1d5db;
+      border-radius: .375rem; font-size: .875rem;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .btn-cancel {
+      padding: .5rem 1rem; background: #e5e7eb; color: #374151; border: none;
+      border-radius: .375rem; cursor: pointer; font-size: .875rem;
+    }
+    .btn-save {
+      padding: .5rem 1rem; background: #2563eb; color: #fff; border: none;
+      border-radius: .375rem; cursor: pointer; font-size: .875rem;
+    }
+
+    .empty { text-align: center; padding: 2rem; color: #9ca3af; font-size: .875rem; }
+
+    .toast {
+      position: fixed; bottom: 1rem; right: 1rem; padding: .75rem 1.25rem;
+      border-radius: .375rem; color: #fff; font-size: .875rem; z-index: 2000;
+      opacity: 0; transition: opacity .3s;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #10b981; }
+    .toast.error { background: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🐛 Domain → Repo Mappings</h1>
+
+    <div class="auth-bar">
+      <input type="password" id="apiKey" placeholder="Admin API key" />
+      <button onclick="loadMappings()">Connect</button>
+    </div>
+
+    <button class="btn-add" onclick="openCreate()">+ Add Mapping</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Origin</th>
+          <th>Owner / Repo</th>
+          <th>Labels</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="5" class="empty">Enter your admin API key and click Connect</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Create / Edit modal -->
+  <div class="overlay" id="modal">
+    <div class="modal">
+      <h2 id="modalTitle">Add Domain Mapping</h2>
+      <input type="hidden" id="editId" />
+      <div class="field">
+        <label for="fOrigin">Origin URL</label>
+        <input id="fOrigin" placeholder="https://stage.myapp.com" />
+      </div>
+      <div class="field">
+        <label for="fOwner">GitHub Owner</label>
+        <input id="fOwner" placeholder="my-org" />
+      </div>
+      <div class="field">
+        <label for="fRepo">GitHub Repo</label>
+        <input id="fRepo" placeholder="my-repo" />
+      </div>
+      <div class="field">
+        <label for="fToken">GitHub Token</label>
+        <input id="fToken" type="password" placeholder="ghp_..." />
+      </div>
+      <div class="field">
+        <label for="fLabels">Default Labels (comma-separated)</label>
+        <input id="fLabels" placeholder="bug,stage,needs-triage" value="bug,stage,needs-triage" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveMapping()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    function key() {
+      return document.getElementById('apiKey').value;
+    }
+
+    function headers() {
+      return { 'Content-Type': 'application/json', 'x-api-key': key() };
+    }
+
+    function toast(msg, type) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast show ' + type;
+      setTimeout(() => el.className = 'toast', 3000);
+    }
+
+    async function loadMappings() {
+      try {
+        const res = await fetch(API_BASE + '/api/admin/domains', { headers: headers() });
+        const json = await res.json();
+        if (!res.ok) { toast(json.error || 'Failed', 'error'); return; }
+
+        const tbody = document.getElementById('tbody');
+        if (!json.data.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty">No domain mappings yet — click "Add Mapping"</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = json.data.map(m => `
+          <tr>
+            <td>${esc(m.origin)}</td>
+            <td>${esc(m.githubOwner)}/${esc(m.githubRepo)}</td>
+            <td>${esc(m.defaultLabels.join(', '))}</td>
+            <td>${new Date(m.createdAt).toLocaleDateString()}</td>
+            <td class="actions">
+              <button class="btn-sm btn-edit" onclick="openEdit('${esc(m.id)}')">Edit</button>
+              <button class="btn-sm btn-delete" onclick="removeDomain('${esc(m.id)}')">Delete</button>
+            </td>
+          </tr>
+        `).join('');
+        toast('Loaded ' + json.data.length + ' mapping(s)', 'success');
+      } catch (e) {
+        toast('Connection failed', 'error');
+      }
+    }
+
+    function openCreate() {
+      document.getElementById('modalTitle').textContent = 'Add Domain Mapping';
+      document.getElementById('editId').value = '';
+      document.getElementById('fOrigin').value = '';
+      document.getElementById('fOwner').value = '';
+      document.getElementById('fRepo').value = '';
+      document.getElementById('fToken').value = '';
+      document.getElementById('fLabels').value = 'bug,stage,needs-triage';
+      document.getElementById('modal').classList.add('open');
+    }
+
+    async function openEdit(id) {
+      try {
+        const res = await fetch(API_BASE + '/api/admin/domains/' + encodeURIComponent(id), { headers: headers() });
+        const json = await res.json();
+        if (!res.ok) { toast(json.error, 'error'); return; }
+        const m = json.data;
+        document.getElementById('modalTitle').textContent = 'Edit Domain Mapping';
+        document.getElementById('editId').value = m.id;
+        document.getElementById('fOrigin').value = m.origin;
+        document.getElementById('fOwner').value = m.githubOwner;
+        document.getElementById('fRepo').value = m.githubRepo;
+        document.getElementById('fToken').value = '';
+        document.getElementById('fLabels').value = m.defaultLabels.join(', ');
+        document.getElementById('modal').classList.add('open');
+      } catch (e) {
+        toast('Failed to load mapping', 'error');
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    async function saveMapping() {
+      const id = document.getElementById('editId').value;
+      const body = {
+        origin: document.getElementById('fOrigin').value.trim(),
+        githubOwner: document.getElementById('fOwner').value.trim(),
+        githubRepo: document.getElementById('fRepo').value.trim(),
+        defaultLabels: document.getElementById('fLabels').value.split(',').map(s => s.trim()).filter(Boolean),
+      };
+
+      const tokenVal = document.getElementById('fToken').value.trim();
+      if (tokenVal) body.githubToken = tokenVal;
+
+      // For create, token is required
+      if (!id && !body.githubToken) {
+        toast('GitHub Token is required for new mappings', 'error');
+        return;
+      }
+
+      try {
+        const url = id
+          ? API_BASE + '/api/admin/domains/' + encodeURIComponent(id)
+          : API_BASE + '/api/admin/domains';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(body) });
+        const json = await res.json();
+        if (!res.ok) { toast(json.error || 'Failed', 'error'); return; }
+
+        toast(id ? 'Mapping updated' : 'Mapping created', 'success');
+        closeModal();
+        loadMappings();
+      } catch (e) {
+        toast('Save failed', 'error');
+      }
+    }
+
+    async function removeDomain(id) {
+      if (!confirm('Delete this domain mapping?')) return;
+      try {
+        const res = await fetch(API_BASE + '/api/admin/domains/' + encodeURIComponent(id), { method: 'DELETE', headers: headers() });
+        const json = await res.json();
+        if (!res.ok) { toast(json.error, 'error'); return; }
+        toast('Mapping deleted', 'success');
+        loadMappings();
+      } catch (e) {
+        toast('Delete failed', 'error');
+      }
+    }
+
+    function esc(str) {
+      const el = document.createElement('span');
+      el.textContent = str;
+      return el.innerHTML;
+    }
+  </script>
+</body>
+</html>

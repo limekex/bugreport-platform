@@ -27,13 +27,18 @@ export const config = {
   },
 
   github: {
-    owner: requireEnv('GITHUB_OWNER'),
-    repo: requireEnv('GITHUB_REPO'),
-    token: requireEnv('GITHUB_TOKEN'),
+    owner: optionalEnv('GITHUB_OWNER', ''),
+    repo: optionalEnv('GITHUB_REPO', ''),
+    token: optionalEnv('GITHUB_TOKEN', ''),
     defaultLabels: optionalEnv('GITHUB_DEFAULT_LABELS', 'bug,stage,needs-triage')
       .split(',')
       .map((l) => l.trim())
       .filter(Boolean),
+  },
+
+  admin: {
+    /** API key required for admin endpoints. When empty, admin routes are disabled. */
+    apiKey: optionalEnv('ADMIN_API_KEY', ''),
   },
 
   storage: {
