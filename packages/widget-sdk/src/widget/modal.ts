@@ -474,7 +474,7 @@ function buildFormHtml(): string {
 
       <div class="__br_field">
         <label for="__br_summary__" class="__br_label">Summary<span class="__br_required">*</span></label>
-        <input id="__br_summary__" name="summary" type="text" required maxlength="200"
+        <input id="__br_summary__" name="summary" type="text" required minlength="5" maxlength="200"
           placeholder="One-line summary of the bug" class="__br_input" />
       </div>
 
@@ -491,25 +491,25 @@ function buildFormHtml(): string {
       <div class="__br_field">
         <label for="__br_whatHappened__" class="__br_label">What happened?<span class="__br_required">*</span></label>
         <textarea id="__br_whatHappened__" name="whatHappened" rows="3"
-          placeholder="Describe what you observed…" required class="__br_textarea"></textarea>
+          placeholder="Describe what you observed…" required minlength="10" class="__br_textarea"></textarea>
       </div>
 
       <div class="__br_field">
         <label for="__br_expectedResult__" class="__br_label">Expected result<span class="__br_required">*</span></label>
         <textarea id="__br_expectedResult__" name="expectedResult" rows="2"
-          placeholder="What should have happened?" required class="__br_textarea"></textarea>
+          placeholder="What should have happened?" required minlength="5" class="__br_textarea"></textarea>
       </div>
 
       <div class="__br_field">
         <label for="__br_actualResult__" class="__br_label">Actual result<span class="__br_required">*</span></label>
         <textarea id="__br_actualResult__" name="actualResult" rows="2"
-          placeholder="What actually happened?" required class="__br_textarea"></textarea>
+          placeholder="What actually happened?" required minlength="5" class="__br_textarea"></textarea>
       </div>
 
       <div class="__br_field">
         <label for="__br_stepsToReproduce__" class="__br_label">Steps to reproduce<span class="__br_required">*</span></label>
         <textarea id="__br_stepsToReproduce__" name="stepsToReproduce" rows="4"
-          placeholder="1. Go to /login\n2. Enter credentials\n3. Click Submit" required class="__br_textarea"></textarea>
+          placeholder="1. Go to /login\n2. Enter credentials\n3. Click Submit" required minlength="5" class="__br_textarea"></textarea>
       </div>
 
       <div class="__br_field">
