@@ -25,7 +25,15 @@ export function createApp() {
   const app = express();
 
   // ── Security headers ────────────────────────────────────────────────────────
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': ["'self'", "'unsafe-inline'"], // Allow inline scripts for admin UI
+        'script-src-attr': ["'unsafe-inline'"], // Allow inline event handlers
+      },
+    },
+  }));
 
   // ── CORS ────────────────────────────────────────────────────────────────────
   // Allowed origins = static list from env + dynamic list from domain mappings
