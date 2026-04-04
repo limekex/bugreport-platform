@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+
+// Ensure the admin API key is available before the config module evaluates.
+// vi.hoisted runs before any vi.mock or module-level imports.
+vi.hoisted(() => {
+  process.env.ADMIN_API_KEY = 'test-admin-key';
+});
+
 import { createApp } from '../src/app';
 
 // Mock the domain mapping store so we don't touch the filesystem
@@ -56,40 +63,28 @@ vi.mock('../src/store/domainMappingStore', async (importOriginal) => {
 });
 
 describe('Admin API — /api/admin/domains', () => {
-  let app: ReturnType<typeof createApp>;
-
   beforeEach(async () => {
     vi.clearAllMocks();
     // Reset the in-memory store
     const store = await import('../src/store/domainMappingStore');
     (store._resetStore as ReturnType<typeof vi.fn>)([]);
-
-    // Set ADMIN_API_KEY for tests
-    process.env.ADMIN_API_KEY = 'test-admin-key';
-    // Re-import config to pick up env changes
-    vi.resetModules();
   });
 
-  // Need to recreate app after resetting modules
-  function getApp() {
-    return createApp();
-  }
-
   it('returns 401 when no API key is provided', async () => {
-    const res = await request(getApp()).get('/api/admin/domains');
+    const res = await request(createApp()).get('/api/admin/domains');
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
   });
 
   it('returns 401 when an invalid API key is provided', async () => {
-    const res = await request(getApp())
+    const res = await request(createApp())
       .get('/api/admin/domains')
       .set('x-api-key', 'wrong-key');
     expect(res.status).toBe(401);
   });
 
   it('lists domain mappings (empty)', async () => {
-    const res = await request(getApp())
+    const res = await request(createApp())
       .get('/api/admin/domains')
       .set('x-api-key', 'test-admin-key');
     expect(res.status).toBe(200);
@@ -98,7 +93,7 @@ describe('Admin API — /api/admin/domains', () => {
   });
 
   it('creates a domain mapping', async () => {
-    const res = await request(getApp())
+    const res = await request(createApp())
       .post('/api/admin/domains')
       .set('x-api-key', 'test-admin-key')
       .send({
@@ -118,7 +113,7 @@ describe('Admin API — /api/admin/domains', () => {
   });
 
   it('rejects creation with invalid data', async () => {
-    const res = await request(getApp())
+    const res = await request(createApp())
       .post('/api/admin/domains')
       .set('x-api-key', 'test-admin-key')
       .send({
@@ -132,8 +127,10 @@ describe('Admin API — /api/admin/domains', () => {
   });
 
   it('gets a single mapping by ID', async () => {
+    const app = createApp();
+
     // Create one first
-    const createRes = await request(getApp())
+    const createRes = await request(app)
       .post('/api/admin/domains')
       .set('x-api-key', 'test-admin-key')
       .send({
@@ -146,7 +143,7 @@ describe('Admin API — /api/admin/domains', () => {
 
     const id = createRes.body.data.id;
 
-    const res = await request(getApp())
+    const res = await request(app)
       .get(`/api/admin/domains/${id}`)
       .set('x-api-key', 'test-admin-key');
     expect(res.status).toBe(200);
@@ -154,15 +151,17 @@ describe('Admin API — /api/admin/domains', () => {
   });
 
   it('returns 404 for non-existent mapping', async () => {
-    const res = await request(getApp())
+    const res = await request(createApp())
       .get('/api/admin/domains/nonexistent')
       .set('x-api-key', 'test-admin-key');
     expect(res.status).toBe(404);
   });
 
   it('updates a mapping', async () => {
+    const app = createApp();
+
     // Create one first
-    const createRes = await request(getApp())
+    const createRes = await request(app)
       .post('/api/admin/domains')
       .set('x-api-key', 'test-admin-key')
       .send({
@@ -174,7 +173,7 @@ describe('Admin API — /api/admin/domains', () => {
 
     const id = createRes.body.data.id;
 
-    const res = await request(getApp())
+    const res = await request(app)
       .put(`/api/admin/domains/${id}`)
       .set('x-api-key', 'test-admin-key')
       .send({ githubRepo: 'new-repo' });
@@ -183,7 +182,9 @@ describe('Admin API — /api/admin/domains', () => {
   });
 
   it('deletes a mapping', async () => {
-    const createRes = await request(getApp())
+    const app = createApp();
+
+    const createRes = await request(app)
       .post('/api/admin/domains')
       .set('x-api-key', 'test-admin-key')
       .send({
@@ -195,7 +196,7 @@ describe('Admin API — /api/admin/domains', () => {
 
     const id = createRes.body.data.id;
 
-    const res = await request(getApp())
+    const res = await request(app)
       .delete(`/api/admin/domains/${id}`)
       .set('x-api-key', 'test-admin-key');
     expect(res.status).toBe(200);
