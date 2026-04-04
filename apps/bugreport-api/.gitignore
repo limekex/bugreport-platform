@@ -12,3 +12,6 @@ uploads/
 .env
 .env.local
 .env.*.local
+
+# Domain mapping data (runtime state, managed via admin UI)
+data/

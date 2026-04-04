@@ -7,8 +7,10 @@ import { config } from './config';
 import { logger } from './lib/logger';
 import { healthRouter } from './routes/health.routes';
 import { reportsRouter } from './routes/reports.routes';
+import { adminRouter } from './routes/admin.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { ipRateLimiter } from './middleware/rateLimiter';
+import { initDomainMappingStore, getAllowedOrigins } from './store/domainMappingStore';
 import fs from 'fs';
 
 // Ensure tmp directory exists for multer uploads
@@ -17,18 +19,26 @@ if (!fs.existsSync('tmp')) {
 }
 
 export function createApp() {
+  // Load persisted domain mappings into memory
+  initDomainMappingStore();
+
   const app = express();
 
   // ── Security headers ────────────────────────────────────────────────────────
   app.use(helmet());
 
   // ── CORS ────────────────────────────────────────────────────────────────────
+  // Allowed origins = static list from env + dynamic list from domain mappings
   app.use(
     cors({
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. curl, server-to-server)
         if (!origin) return callback(null, true);
         if (config.cors.allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        // Check dynamic domain mappings
+        if (getAllowedOrigins().includes(origin)) {
           return callback(null, true);
         }
         callback(new Error(`CORS: origin '${origin}' not allowed`));
@@ -59,9 +69,13 @@ export function createApp() {
     logger.debug({ uploadsDir }, 'Serving local uploads directory');
   }
 
+  // ── Admin UI ───────────────────────────────────────────────────────────────
+  app.use('/admin', express.static(path.resolve(__dirname, 'public')));
+
   // ── Routes ──────────────────────────────────────────────────────────────────
   app.use('/health', healthRouter);
   app.use('/api/reports', reportsRouter);
+  app.use('/api/admin/domains', adminRouter);
 
   // ── Error handler (must be last) ────────────────────────────────────────────
   app.use(errorHandler);
