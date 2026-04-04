@@ -45,13 +45,32 @@ export function createApp() {
       origin: (origin, callback) => {
         // Allow requests with no origin (e.g. curl, server-to-server)
         if (!origin) return callback(null, true);
+        
+        // Check static origins from .env
         if (config.cors.allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
-        // Check dynamic domain mappings
+        
+        // Check dynamic domain mappings from admin UI
         if (getAllowedOrigins().includes(origin)) {
           return callback(null, true);
         }
+        
+        // Check for wildcard patterns (e.g., *.vercel.app)
+        const isWildcardMatch = [...config.cors.allowedOrigins, ...getAllowedOrigins()].some(
+          (allowedOrigin) => {
+            if (allowedOrigin.startsWith('*.')) {
+              const domain = allowedOrigin.slice(2); // Remove '*.'
+              return origin.endsWith(domain);
+            }
+            return false;
+          }
+        );
+        
+        if (isWildcardMatch) {
+          return callback(null, true);
+        }
+        
         callback(new Error(`CORS: origin '${origin}' not allowed`));
       },
       credentials: true,
