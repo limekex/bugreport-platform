@@ -34,12 +34,14 @@ This roadmap is inspired by the feature set of tools like Marker.io, adapted to 
 - [x] **Signed upload URLs** — pre-signed S3 GET URLs when `STORAGE_PUBLIC_URL_BASE` is not configured
 - [x] **Comprehensive setup instructions** — README covers all features, env vars, and integration guide
 - [x] **Screenshot annotation** — draw arrows, rectangles, circles, freehand, and add text labels with color picker and undo
+- [x] **Tester authentication (core)** — JWT-based login/register system, token management, authenticated bug reports with tester identity in GitHub issues
 
 ---
 
 ## Next
 
-- [ ] **Tester allow-listing & authentication** — require testers to log in, track reporter identity in issues
+- [ ] **Tester management UI** — admin interface for creating, viewing, and managing tester accounts
+- [ ] **Widget login UI** — in-widget registration and login forms for testers
 - [ ] **React wrapper component** — `<BugReporter />` component for React apps (Headless UI or Radix)
 
 ---
