@@ -4,7 +4,7 @@
   "private": true,
   "description": "Internal bug reporting platform for staging/UAT environments",
   "engines": {
-    "node": ">=20",
+    "node": ">=22",
     "pnpm": ">=8"
   },
   "scripts": {
