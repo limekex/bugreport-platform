@@ -93,16 +93,44 @@
     .toast.show { opacity: 1; }
     .toast.success { background: #10b981; }
     .toast.error { background: #ef4444; }
+
+    /* ── Login screen ──────────────────────────────────────────────── */
+    .login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      background: #fff; padding: 2rem; border-radius: .5rem; box-shadow: 0 4px 12px rgba(0,0,0,.1);
+      width: 400px; max-width: 95vw;
+    }
+    .login-box h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .login-box p { font-size: .875rem; color: #6b7280; margin-bottom: 1.5rem; }
+    .login-box input {
+      width: 100%; padding: .625rem .75rem; border: 1px solid #d1d5db;
+      border-radius: .375rem; font-size: .875rem; margin-bottom: .75rem;
+    }
+    .login-box button {
+      width: 100%; padding: .625rem; background: #2563eb; color: #fff; border: none;
+      border-radius: .375rem; cursor: pointer; font-size: .875rem; font-weight: 500;
+    }
+    .login-box button:hover { background: #1d4ed8; }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🐛 Domain → Repo Mappings</h1>
-
-    <div class="auth-bar">
-      <input type="password" id="apiKey" placeholder="Admin API key" />
-      <button onclick="loadMappings()">Connect</button>
+  <!-- Login screen (shown by default) -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <h1>🐛 Admin Login</h1>
+      <p>Enter your admin API key to manage domain mappings.</p>
+      <input type="password" id="loginApiKey" placeholder="Admin API key" onkeypress="if(event.key==='Enter') authenticate()" />
+      <button onclick="authenticate()">Sign In</button>
     </div>
+  </div>
+
+  <!-- Main admin UI (hidden until authenticated) -->
+  <div class="container hidden" id="mainContent">
+    <h1>🐛 Domain → Repo Mappings</h1>
 
     <button class="btn-add" onclick="openCreate()">+ Add Mapping</button>
 
@@ -117,7 +145,7 @@
         </tr>
       </thead>
       <tbody id="tbody">
-        <tr><td colspan="5" class="empty">Enter your admin API key and click Connect</td></tr>
+        <tr><td colspan="5" class="empty">Loading...</td></tr>
       </tbody>
     </table>
   </div>
@@ -158,13 +186,10 @@
 
   <script>
     const API_BASE = window.location.origin;
-
-    function key() {
-      return document.getElementById('apiKey').value;
-    }
+    let AUTH_KEY = null;
 
     function headers() {
-      return { 'Content-Type': 'application/json', 'x-api-key': key() };
+      return { 'Content-Type': 'application/json', 'x-api-key': AUTH_KEY };
     }
 
     function toast(msg, type) {
@@ -172,6 +197,35 @@
       el.textContent = msg;
       el.className = 'toast show ' + type;
       setTimeout(() => el.className = 'toast', 3000);
+    }
+
+    async function authenticate() {
+      const key = document.getElementById('loginApiKey').value.trim();
+      if (!key) {
+        toast('Please enter an API key', 'error');
+        return;
+      }
+
+      // Test the key by fetching mappings
+      try {
+        const res = await fetch(API_BASE + '/api/admin/domains', {
+          headers: { 'Content-Type': 'application/json', 'x-api-key': key }
+        });
+        
+        if (!res.ok) {
+          toast('Invalid API key', 'error');
+          return;
+        }
+
+        // Key is valid - store it and show main UI
+        AUTH_KEY = key;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+        loadMappings();
+        toast('Authenticated', 'success');
+      } catch (e) {
+        toast('Authentication failed', 'error');
+      }
     }
 
     async function loadMappings() {
@@ -198,9 +252,8 @@
             </td>
           </tr>
         `).join('');
-        toast('Loaded ' + json.data.length + ' mapping(s)', 'success');
       } catch (e) {
-        toast('Connection failed', 'error');
+        toast('Failed to load mappings', 'error');
       }
     }
 
