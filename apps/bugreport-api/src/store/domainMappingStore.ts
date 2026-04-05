@@ -56,20 +56,41 @@ export function getMappingById(id: string): DomainMapping | undefined {
 
 /**
  * Look up a mapping by the request's `Origin` header value.
- * Supports exact matches and wildcard patterns (e.g., *.vercel.app).
+ * Supports exact matches and wildcard patterns (e.g., *.vercel.app or https://*.vercel.app).
  * Returns `undefined` when no mapping is configured for the given origin.
  */
 export function getMappingByOrigin(origin: string): DomainMapping | undefined {
+  // Normalize origin: remove trailing slash
+  const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+  
   // First try exact match
-  const exactMatch = mappings.find((m) => m.origin === origin);
+  const exactMatch = mappings.find((m) => {
+    const normalizedMapping = m.origin.endsWith('/') ? m.origin.slice(0, -1) : m.origin;
+    return normalizedMapping === normalizedOrigin;
+  });
   if (exactMatch) return exactMatch;
 
-  // Then try wildcard match (e.g., *.vercel.app)
+  // Then try wildcard match (e.g., *.vercel.app or https://*.vercel.app/)
   return mappings.find((m) => {
-    if (m.origin.startsWith('*.')) {
-      const domain = m.origin.slice(2); // Remove '*.'
-      return origin.endsWith(domain);
+    let pattern = m.origin.endsWith('/') ? m.origin.slice(0, -1) : m.origin;
+    
+    // Check if pattern contains wildcard
+    if (pattern.includes('*')) {
+      // Extract the wildcard domain part
+      // Handles both '*.vercel.app' and 'https://*.vercel.app'
+      const wildcardIndex = pattern.indexOf('*');
+      const beforeWildcard = pattern.substring(0, wildcardIndex);
+      const afterWildcard = pattern.substring(wildcardIndex + 1);
+      
+      // Check if origin matches the pattern
+      // Origin must start with same protocol (if any) and end with the domain pattern
+      if (beforeWildcard && !normalizedOrigin.startsWith(beforeWildcard)) {
+        return false;
+      }
+      
+      return normalizedOrigin.endsWith(afterWildcard);
     }
+    
     return false;
   });
 }
