@@ -1,0 +1,50 @@
+{
+  "name": "@limekex/bugreport-widget-react",
+  "version": "0.1.0",
+  "description": "React wrapper for the BugReport Widget SDK",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --watch --project tsconfig.json"
+  },
+  "keywords": [
+    "bug-report",
+    "bug-reporter",
+    "issue-tracker",
+    "react",
+    "react-component",
+    "github-issues"
+  ],
+  "author": "limekex",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/limekex/bugreport-platform.git",
+    "directory": "packages/widget-react"
+  },
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@limekex/bugreport-widget-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "typescript": "^5.9.3"
+  }
+}
