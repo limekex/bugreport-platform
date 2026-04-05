@@ -1,4 +1,5 @@
 import { BugReportInput } from '../schemas/bugReport.schema';
+import { TesterInfo } from '../controllers/bugReport.controller';
 
 /**
  * Formats a validated bug report payload into the GitHub Issue markdown body.
@@ -9,6 +10,7 @@ export function formatIssueBody(
   report: BugReportInput,
   screenshotUrl?: string,
   timestamp?: string,
+  testerInfo?: TesterInfo,
 ): string {
   const lines: string[] = [];
   const ts = timestamp ?? new Date().toISOString();
@@ -39,8 +41,15 @@ export function formatIssueBody(
 
   // ── Reporter ───────────────────────────────────────────────────────────────
   lines.push(`\n## Reporter\n`);
-  lines.push(`**Tester ID:** ${report.testerId ?? 'unknown'}`);
-  lines.push(`**Tester role:** ${report.testerRole ?? 'unknown'}`);
+  
+  if (testerInfo) {
+    lines.push(`**Authenticated Tester:** ${testerInfo.name} (${testerInfo.email})`);
+    lines.push(`**Tester ID:** ${testerInfo.id}`);
+  } else {
+    lines.push(`**Tester ID:** ${report.testerId ?? 'unknown (unauthenticated)'}`);
+    lines.push(`**Tester role:** ${report.testerRole ?? 'unknown'}`);
+  }
+  
   field('Contact email', report.contactEmail);
 
   // ── Severity ───────────────────────────────────────────────────────────────

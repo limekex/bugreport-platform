@@ -41,6 +41,13 @@ export const config = {
     apiKey: optionalEnv('ADMIN_API_KEY', ''),
   },
 
+  auth: {
+    /** JWT secret for signing tester auth tokens */
+    jwtSecret: optionalEnv('JWT_SECRET', 'your-secret-key-change-in-production'),
+    /** Whether tester authentication is required for submitting bug reports */
+    required: optionalEnv('AUTH_REQUIRED', 'false') === 'true',
+  },
+
   storage: {
     provider: optionalEnv('STORAGE_PROVIDER', 'local') as 'local' | 's3' | 'r2',
     bucket: optionalEnv('STORAGE_BUCKET', ''),

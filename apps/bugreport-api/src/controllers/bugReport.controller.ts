@@ -5,9 +5,17 @@ import { formatIssueBody, formatIssueTitle } from '../services/issueFormatter.se
 import { buildLabels } from '../services/labelBuilder.service';
 import { createGitHubIssue, GitHubTarget } from '../services/github.service';
 import { uploadScreenshot } from '../services/storage.service';
+import { verifyTesterToken } from '../services/auth.service';
+import { getTesterById } from '../store/testerStore';
 import { config } from '../config';
 import { getMappingByOrigin } from '../store/domainMappingStore';
 import { logger } from '../lib/logger';
+
+export interface TesterInfo {
+  id: string;
+  email: string;
+  name: string;
+}
 
 export async function submitBugReport(req: Request, res: Response, next: NextFunction) {
   try {
@@ -75,7 +83,43 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
       }
     }
 
-    // 3. Resolve GitHub target from the request origin (domain mapping)
+    // 3. Tester authentication (optional or required based on config)
+    let testerInfo: TesterInfo | undefined;
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const payload = verifyTesterToken(token);
+
+      if (payload) {
+        // Verify tester still exists and is active
+        const tester = getTesterById(payload.testerId);
+        if (tester && tester.isActive) {
+          testerInfo = {
+            id: tester.id,
+            email: tester.email,
+            name: tester.name,
+          };
+          logger.info({ reportId, testerId: tester.id }, 'Report submitted by authenticated tester');
+        } else {
+          logger.warn({ reportId, testerId: payload.testerId }, 'Token valid but tester inactive or not found');
+        }
+      } else {
+        logger.warn({ reportId }, 'Invalid authentication token provided');
+      }
+    }
+
+    // If auth is required but no valid tester found, reject
+    if (config.auth.required && !testerInfo) {
+      logger.warn({ reportId }, 'Authentication required but not provided');
+      res.status(401).json({
+        success: false,
+        error: 'Authentication required. Please log in to submit bug reports.',
+      });
+      return;
+    }
+
+    // 4. Resolve GitHub target from the request origin (domain mapping)
     const origin = req.headers.origin;
     const mapping = origin ? getMappingByOrigin(origin) : undefined;
 
@@ -94,7 +138,7 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
       logger.info({ reportId, origin, fallback: { owner: config.github.owner, repo: config.github.repo } }, 'No mapping found, using .env fallback');
     }
 
-    // 4. Handle optional screenshot upload
+    // 5. Handle optional screenshot upload
     let screenshotUrl: string | undefined;
     const file = req.file;
     if (file) {
@@ -102,14 +146,14 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
       screenshotUrl = result.url ?? undefined;
     }
 
-    // 5. Format issue body and title
+    // 6. Format issue body and title
     const title = formatIssueTitle(report.summary);
-    const body = formatIssueBody(report, screenshotUrl, timestamp);
+    const body = formatIssueBody(report, screenshotUrl, timestamp, testerInfo);
 
-    // 6. Build label list
+    // 7. Build label list
     const labels = buildLabels(report.severity, defaultLabels);
 
-    // 7. Create GitHub issue
+    // 8. Create GitHub issue
     const { issueNumber, issueUrl } = await createGitHubIssue({ title, body, labels }, target);
 
     logger.info({ reportId, issueNumber, issueUrl }, 'Bug report submitted successfully');

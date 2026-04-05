@@ -1,6 +1,6 @@
 import type { BugReporterConfig } from '../types/shared.types';
 import { buildReportPayload } from '../utils/payloadBuilder';
-import { submitReport } from '../utils/apiClient';
+import { submitReport, getAuthToken } from '../utils/apiClient';
 import { capturePageScreenshot } from '../utils/screenshotCapture';
 import { openAnnotationEditor } from './annotationEditor';
 
@@ -446,7 +446,14 @@ async function handleSubmit(
       formData.append('screenshot', values.screenshot);
     }
 
-    const result = await submitReport({ apiBaseUrl: config.apiBaseUrl, formData });
+    // Get auth token if user is logged in
+    const authToken = getAuthToken();
+
+    const result = await submitReport({
+      apiBaseUrl: config.apiBaseUrl,
+      formData,
+      authToken,
+    });
 
     setFormState(form, 'success');
   } catch (err) {

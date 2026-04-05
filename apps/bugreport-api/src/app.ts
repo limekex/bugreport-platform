@@ -7,6 +7,7 @@ import { config } from './config';
 import { logger } from './lib/logger';
 import { healthRouter } from './routes/health.routes';
 import { reportsRouter } from './routes/reports.routes';
+import authRouter from './routes/auth.routes';
 import { adminRouter } from './routes/admin.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { ipRateLimiter } from './middleware/rateLimiter';
@@ -105,6 +106,7 @@ export function createApp() {
   // ── Routes ──────────────────────────────────────────────────────────────────
   app.use('/health', healthRouter);
   app.use('/api/reports', reportsRouter);
+  app.use('/api/auth', authRouter);
   app.use('/api/admin/domains', adminRouter);
 
   // ── Error handler (must be last) ────────────────────────────────────────────

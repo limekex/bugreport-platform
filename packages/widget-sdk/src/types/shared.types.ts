@@ -113,3 +113,37 @@ export interface BugReportErrorResponse {
 }
 
 export type BugReportResponse = BugReportSuccessResponse | BugReportErrorResponse;
+
+// ─── Authentication Types ────────────────────────────────────────────────────
+
+export interface AuthRegisterRequest {
+  email: string;
+  name: string;
+  password: string;
+}
+
+export interface AuthLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface TesterInfo {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface AuthSuccessResponse {
+  success: true;
+  token: string;
+  tester: TesterInfo;
+}
+
+export interface AuthErrorResponse {
+  success: false;
+  error: string;
+  details?: unknown;
+}
+
+export type AuthResponse = AuthSuccessResponse | AuthErrorResponse;
+
