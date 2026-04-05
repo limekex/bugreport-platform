@@ -28,6 +28,7 @@ export interface CapturedError {
 
 const errorBuffer: CapturedError[] = [];
 let hooked = false;
+let originalConsoleError: typeof console.error | null = null;
 
 /**
  * Installs error capture hooks for:
@@ -43,9 +44,9 @@ export function installConsoleErrorHook(): void {
   hooked = true;
 
   // Hook console.error (works in both Node.js and browser)
-  const originalError = console.error.bind(console);
+  originalConsoleError = console.error.bind(console);
   console.error = (...args: unknown[]) => {
-    originalError(...args);
+    originalConsoleError!(...args);
     captureError(args);
   };
 
@@ -95,6 +96,20 @@ export function getCollectedErrors(): string | undefined {
 
 /** Clears the in-memory buffer (useful for testing). */
 export function clearCollectedErrors(): void {
+  errorBuffer.length = 0;
+}
+
+/**
+ * Resets the hooked state (for testing only).
+ * Restores original console.error and clears the buffer.
+ * @internal
+ */
+export function __resetHookForTesting(): void {
+  if (originalConsoleError && typeof console !== 'undefined') {
+    console.error = originalConsoleError;
+  }
+  hooked = false;
+  originalConsoleError = null;
   errorBuffer.length = 0;
 }
 

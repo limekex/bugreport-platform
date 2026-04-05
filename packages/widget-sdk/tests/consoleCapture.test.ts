@@ -3,16 +3,16 @@ import {
   installConsoleErrorHook,
   getCollectedErrors,
   clearCollectedErrors,
+  __resetHookForTesting,
 } from '../src/utils/consoleCapture';
 
 describe('installConsoleErrorHook', () => {
   beforeEach(() => {
-    clearCollectedErrors();
-    // Reset the 'hooked' flag by reimporting the module fresh each test
+    __resetHookForTesting();
   });
 
   afterEach(() => {
-    clearCollectedErrors();
+    __resetHookForTesting();
   });
 
   it('captures a string console.error call', () => {
@@ -70,8 +70,8 @@ describe('installConsoleErrorHook', () => {
 });
 
 describe('getCollectedErrors — output format', () => {
-  beforeEach(() => clearCollectedErrors());
-  afterEach(() => clearCollectedErrors());
+  beforeEach(() => __resetHookForTesting());
+  afterEach(() => __resetHookForTesting());
 
   it('returns a JSON array string', () => {
     installConsoleErrorHook();
