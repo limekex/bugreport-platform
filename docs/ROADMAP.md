@@ -35,14 +35,20 @@ This roadmap is inspired by the feature set of tools like Marker.io, adapted to 
 - [x] **Comprehensive setup instructions** — README covers all features, env vars, and integration guide
 - [x] **Screenshot annotation** — draw arrows, rectangles, circles, freehand, and add text labels with color picker and undo
 - [x] **Tester authentication (core)** — JWT-based login/register system, token management, authenticated bug reports with tester identity in GitHub issues
+- [x] **React wrapper component** — `<BugReporter />` declarative component with SSR support, TypeScript, and `useBugReporter()` hook
 
 ---
 
-## Next
+## Future Enhancements
 
 - [ ] **Tester management UI** — admin interface for creating, viewing, and managing tester accounts
 - [ ] **Widget login UI** — in-widget registration and login forms for testers
-- [ ] **React wrapper component** — `<BugReporter />` component for React apps (Headless UI or Radix)
+- [ ] **Email verification** — verify tester email addresses before activation
+- [ ] **Password reset flow** — allow testers to reset forgotten passwords
+- [ ] **Bcrypt password hashing** — upgrade from SHA-256 to bcrypt for production
+- [ ] **Advanced screenshot tools** — blur sensitive data, crop, highlight
+- [ ] **Video recording** — capture screen recordings for complex bugs
+- [ ] **Browser extension** — report bugs from any website
 
 ---
 
