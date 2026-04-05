@@ -65,13 +65,6 @@ export const config = {
     /** Redis connection URL. When set, per-tester rate limiting uses Redis instead of in-memory. */
     url: optionalEnv('REDIS_URL', ''),
   },
-
-  turnstile: {
-    /** Cloudflare Turnstile secret key for bot verification */
-    secretKey: optionalEnv('TURNSTILE_SECRET_KEY', ''),
-    /** Whether Turnstile verification is required for all bug reports */
-    required: optionalEnv('TURNSTILE_REQUIRED', 'false') === 'true',
-  },
 } as const;
 
 export type AppConfig = typeof config;

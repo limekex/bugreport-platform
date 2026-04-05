@@ -259,10 +259,14 @@ function injectStyles(): void {
  * - "Capture current screen" button (html2canvas when available)
  * - Accessible: aria roles, keyboard dismiss, label associations
  */
+// Track when modal was opened (for timing bot check)
+let modalOpenedAt = 0;
+
 export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks): void {
   if (document.getElementById(MODAL_ID)) return;
 
   injectStyles();
+  modalOpenedAt = Date.now();
 
   const overlay = document.createElement('div');
   overlay.id = OVERLAY_ID;
@@ -276,11 +280,6 @@ export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks):
   modal.innerHTML = buildFormHtml();
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
-
-  // ── Turnstile verification ────────────────────────────────────────────────
-  if (config.turnstileSiteKey) {
-    initTurnstile(config.turnstileSiteKey);
-  }
 
   // ── Close handlers ─────────────────────────────────────────────────────────
   const closeBtn = document.getElementById('__bugreport_close__');
@@ -397,15 +396,13 @@ async function handleSubmit(
   try {
     const values = collectFormValues(form);
     
-    // Get Turnstile token if enabled
-    let turnstileToken: string | undefined;
-    if (config.turnstileSiteKey) {
-      turnstileToken = getTurnstileToken();
-      if (!turnstileToken) {
-        setFormState(form, 'error', 'Please complete the verification challenge');
-        return;
-      }
-    }
+    // Bot protection: honeypot + math challenge + timing
+    const timeSpent = Math.floor((Date.now() - modalOpenedAt) / 1000);
+    const botCheck = {
+      honeypot: values.honeypot,
+      mathAnswer: values.mathAnswer,
+      timeSpent,
+    };
     
     const formData = buildReportPayload(
       {
@@ -417,7 +414,7 @@ async function handleSubmit(
         stepsToReproduce: values.stepsToReproduce,
         notes: values.notes || undefined,
         environment: config.environment,
-        turnstileToken,
+        botCheck: JSON.stringify(botCheck),
       },
       config,
     );
@@ -458,6 +455,8 @@ function collectFormValues(form: HTMLFormElement): {
   notes: string;
   screenshot: File | null;
   capturedScreenshot: string;
+  honeypot: string;
+  mathAnswer: string;
 } {
   const data = new FormData(form);
   const screenshot = (form.querySelector('#__br_screenshot__') as HTMLInputElement)?.files?.[0] ?? null;
@@ -472,6 +471,8 @@ function collectFormValues(form: HTMLFormElement): {
     notes: String(data.get('notes') ?? ''),
     screenshot,
     capturedScreenshot,
+    honeypot: String(data.get('website') ?? ''),
+    mathAnswer: String(data.get('mathAnswer') ?? ''),
   };
 }
 
@@ -503,6 +504,12 @@ function setFormState(form: HTMLFormElement, state: FormState, message?: string)
 }
 
 function buildFormHtml(): string {
+  // Generate random math challenge
+  const num1 = Math.floor(Math.random() * 10) + 1; // 1-10
+  const num2 = Math.floor(Math.random() * 10) + 1; // 1-10
+  const mathQuestion = `${num1} + ${num2}`;
+  const mathAnswer = num1 + num2;
+  
   return `
     <div class="__br_header">
       <h2 id="__bugreport_title__" class="__br_title">🐛 Report a bug</h2>
@@ -510,6 +517,9 @@ function buildFormHtml(): string {
     </div>
 
     <form id="__bugreport_form__" novalidate>
+
+      <!-- Honeypot field (hidden from users, bots will fill it) -->
+      <input name="website" type="text" class="__br_honeypot" tabindex="-1" autocomplete="off" />
 
       <div class="__br_field">
         <label for="__br_summary__" class="__br_label">Summary<span class="__br_required">*</span></label>
@@ -572,14 +582,24 @@ function buildFormHtml(): string {
           placeholder="Anything else worth mentioning?" class="__br_textarea"></textarea>
       </div>
 
+      <!-- Bot protection: Math challenge -->
+      <div class="__br_field __br_math_challenge">
+        <label for="__br_mathAnswer__" class="__br_label">Quick check: What is ${mathQuestion}?<span class="__br_required">*</span></label>
+        <input id="__br_mathAnswer__" name="mathAnswer" type="number" 
+          required 
+          data-answer="${mathAnswer}" 
+          placeholder="Enter the answer" 
+          class="__br_input" 
+          style="max-width: 120px;" />
+        <p class="__br_hint">Help us prevent spam</p>
+      </div>
+
       <div class="__br_field">
         <label class="__br_checkbox_label">
           <input id="__br_confirm__" type="checkbox" required class="__br_checkbox" />
           <span>I confirm this is a legitimate bug report</span>
         </label>
       </div>
-
-      <div id="__br_turnstile__" class="__br_turnstile"></div>
 
       <div id="__bugreport_status__"></div>
 
@@ -589,67 +609,4 @@ function buildFormHtml(): string {
 
     </form>
   `;
-}
-
-// ── Turnstile verification ───────────────────────────────────────────────────
-
-// Global variable to store Turnstile widget ID
-let turnstileWidgetId: string | null = null;
-
-/**
- * Loads Cloudflare Turnstile script and renders the widget.
- */
-function initTurnstile(siteKey: string): void {
-  // Load Turnstile script if not already loaded
-  if (!document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) {
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-    
-    script.onload = () => renderTurnstileWidget(siteKey);
-  } else {
-    // Script already loaded, render widget immediately
-    renderTurnstileWidget(siteKey);
-  }
-}
-
-/**
- * Renders the Turnstile widget in the designated container.
- */
-function renderTurnstileWidget(siteKey: string): void {
-  const container = document.getElementById('__br_turnstile__');
-  if (!container) return;
-
-  // Wait for Turnstile API to be available
-  const checkInterval = setInterval(() => {
-    if (typeof (window as any).turnstile !== 'undefined') {
-      clearInterval(checkInterval);
-      
-      turnstileWidgetId = (window as any).turnstile.render('#__br_turnstile__', {
-        sitekey: siteKey,
-        theme: 'light',
-        size: 'normal',
-      });
-    }
-  }, 100);
-  
-  // Timeout after 5 seconds
-  setTimeout(() => clearInterval(checkInterval), 5000);
-}
-
-/**
- * Gets the current Turnstile response token.
- */
-function getTurnstileToken(): string | null {
-  if (typeof (window as any).turnstile === 'undefined' || turnstileWidgetId === null) {
-    return null;
-  }
-  
-  try {
-    return (window as any).turnstile.getResponse(turnstileWidgetId);
-  } catch {
-    return null;
-  }
 }

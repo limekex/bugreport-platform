@@ -38,8 +38,8 @@ export const bugReportSchema = z.object({
   // Failed network requests as a JSON string
   failedNetworkRequests: z.string().max(10000).optional(),
 
-  // Bot verification
-  turnstileToken: z.string().max(2048).optional(),
+  // Bot protection (honeypot, math challenge, timing)
+  botCheck: z.string().max(500).optional(),
 });
 
 export type BugReportInput = z.infer<typeof bugReportSchema>;

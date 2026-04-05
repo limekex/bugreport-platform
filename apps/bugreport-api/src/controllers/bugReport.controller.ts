@@ -5,7 +5,6 @@ import { formatIssueBody, formatIssueTitle } from '../services/issueFormatter.se
 import { buildLabels } from '../services/labelBuilder.service';
 import { createGitHubIssue, GitHubTarget } from '../services/github.service';
 import { uploadScreenshot } from '../services/storage.service';
-import { verifyTurnstileToken } from '../services/turnstile.service';
 import { config } from '../config';
 import { getMappingByOrigin } from '../store/domainMappingStore';
 import { logger } from '../lib/logger';
@@ -27,24 +26,53 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
     const reportId = nanoid();
     const timestamp = new Date().toISOString();
 
-    // 2. Verify Turnstile token if required
-    if (config.turnstile?.required && report.turnstileToken) {
-      const clientIp = req.ip || req.socket.remoteAddress;
-      const isValid = await verifyTurnstileToken(report.turnstileToken, clientIp);
-      
-      if (!isValid) {
+    // 2. Bot protection: honeypot + math challenge + timing check
+    if (report.botCheck) {
+      try {
+        const botCheck = JSON.parse(report.botCheck);
+        
+        // Check 1: Honeypot field should be empty (bots often auto-fill all fields)
+        if (botCheck.honeypot && botCheck.honeypot.trim() !== '') {
+          logger.warn({ reportId }, 'Bot detected: honeypot field filled');
+          res.status(400).json({
+            success: false,
+            error: 'Invalid submission detected.',
+          });
+          return;
+        }
+
+        // Check 2: Math answer should be present (basic validation)
+        // The frontend stores the correct answer in a data attribute, 
+        // but we don't validate the actual math here since that would require
+        // recreating the same random question. Instead, we just check it exists.
+        // A more sophisticated approach would send a hashed challenge token.
+        if (!botCheck.mathAnswer || botCheck.mathAnswer.toString().trim() === '') {
+          logger.warn({ reportId }, 'Bot detected: math answer missing');
+          res.status(400).json({
+            success: false,
+            error: 'Please answer the verification question.',
+          });
+          return;
+        }
+
+        // Check 3: Timing check - submissions under 2 seconds are suspicious
+        const MIN_TIME_SECONDS = 2;
+        if (botCheck.timeSpent < MIN_TIME_SECONDS) {
+          logger.warn({ reportId, timeSpent: botCheck.timeSpent }, 'Bot detected: submission too fast');
+          res.status(400).json({
+            success: false,
+            error: 'Submission too fast. Please take your time to fill out the form.',
+          });
+          return;
+        }
+      } catch (err) {
+        logger.warn({ reportId, error: err }, 'Failed to parse botCheck');
         res.status(400).json({
           success: false,
-          error: 'Bot verification failed. Please try again.',
+          error: 'Invalid bot verification data.',
         });
         return;
       }
-    } else if (config.turnstile?.required && !report.turnstileToken) {
-      res.status(400).json({
-        success: false,
-        error: 'Bot verification required.',
-      });
-      return;
     }
 
     // 3. Resolve GitHub target from the request origin (domain mapping)
