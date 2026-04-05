@@ -44,6 +44,8 @@ export interface BugReporterConfig {
   getTraceContext?: () => TraceContext;
   /** Optional theme overrides */
   theme?: WidgetTheme;
+  /** Require testers to sign in before submitting bug reports */
+  requireAuth?: boolean;
 }
 
 // ─── API Types ───────────────────────────────────────────────────────────────

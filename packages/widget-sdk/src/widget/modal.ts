@@ -1,8 +1,9 @@
 import type { BugReporterConfig } from '../types/shared.types';
 import { buildReportPayload } from '../utils/payloadBuilder';
-import { submitReport, getAuthToken } from '../utils/apiClient';
+import { submitReport, getAuthToken, getTesterInfo } from '../utils/apiClient';
 import { capturePageScreenshot } from '../utils/screenshotCapture';
 import { openAnnotationEditor } from './annotationEditor';
+import { initAuthModal, openAuthModal } from './authModal';
 
 const SUCCESS_AUTO_CLOSE_DELAY_MS = 4000;
 const MODAL_ID = '__bugreport_modal__';
@@ -272,6 +273,21 @@ let modalOpenedAt = 0;
 
 export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks): void {
   if (document.getElementById(MODAL_ID)) return;
+
+  // Initialize auth modal if not already done
+  initAuthModal(config.apiBaseUrl);
+
+  // Check if authentication is required
+  const requiresAuth = config.requireAuth === true;
+  const isAuthenticated = !!getAuthToken() && !!getTesterInfo();
+
+  if (requiresAuth && !isAuthenticated) {
+    // Show auth modal first, then open bug report modal on success
+    openAuthModal(() => {
+      openModal(config, callbacks);
+    });
+    return;
+  }
 
   injectStyles();
   modalOpenedAt = Date.now();

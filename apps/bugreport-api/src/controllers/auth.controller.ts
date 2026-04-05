@@ -37,7 +37,7 @@ export async function register(req: Request, res: Response): Promise<void> {
   try {
     const body = registerSchema.parse(req.body);
 
-    const tester = createTester({
+    const tester = await createTester({
       email: body.email,
       name: body.name,
       password: body.password,
@@ -90,7 +90,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   try {
     const body = loginSchema.parse(req.body);
 
-    const tester = authenticateTester(body.email, body.password);
+    const tester = await authenticateTester(body.email, body.password);
 
     if (!tester) {
       res.status(401).json({

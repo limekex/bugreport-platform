@@ -9,6 +9,9 @@ import { healthRouter } from './routes/health.routes';
 import { reportsRouter } from './routes/reports.routes';
 import authRouter from './routes/auth.routes';
 import { adminRouter } from './routes/admin.routes';
+import testerAdminRouter from './routes/testerAdmin.routes';
+import emailVerificationRouter from './routes/emailVerification.routes';
+import passwordResetRouter from './routes/passwordReset.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { ipRateLimiter } from './middleware/rateLimiter';
 import { initDomainMappingStore, getAllowedOrigins } from './store/domainMappingStore';
@@ -108,6 +111,9 @@ export function createApp() {
   app.use('/api/reports', reportsRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/admin/domains', adminRouter);
+  app.use('/api/admin/testers', testerAdminRouter);
+  app.use('/api/email', emailVerificationRouter);
+  app.use('/api/password', passwordResetRouter);
 
   // ── Error handler (must be last) ────────────────────────────────────────────
   app.use(errorHandler);

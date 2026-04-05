@@ -16,6 +16,18 @@
 
     h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
 
+    /* ── Navigation ────────────────────────────────────────────────── */
+    .nav {
+      display: flex; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem;
+      border-bottom: 1px solid #d1d5db;
+    }
+    .nav a {
+      color: #6b7280; text-decoration: none; font-weight: 500;
+    }
+    .nav a.active {
+      color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: .5rem;
+    }
+
     /* ── Auth bar ──────────────────────────────────────────────────── */
     .auth-bar {
       display: flex; gap: .5rem; margin-bottom: 1.5rem; align-items: center;
@@ -131,6 +143,11 @@
   <!-- Main admin UI (hidden until authenticated) -->
   <div class="container hidden" id="mainContent">
     <h1>🐛 Domain → Repo Mappings</h1>
+
+    <div class="nav">
+      <a href="/admin" class="active">Domain Mappings</a>
+      <a href="/admin/testers.html">Testers</a>
+    </div>
 
     <button class="btn-add" onclick="openCreate()">+ Add Mapping</button>
 

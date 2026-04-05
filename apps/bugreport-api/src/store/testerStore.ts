@@ -7,7 +7,10 @@
 
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
+
+const SALT_ROUNDS = 10;
 
 export interface Tester {
   id: string;
@@ -17,6 +20,10 @@ export interface Tester {
   createdAt: string;
   lastLoginAt?: string;
   isActive: boolean;
+  emailVerified?: boolean;
+  verificationToken?: string;
+  resetToken?: string;
+  resetTokenExpiry?: string;
 }
 
 export interface TesterCreateInput {
@@ -55,12 +62,12 @@ function saveTesters(): void {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
+async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
 }
 
 function toPublic(tester: Tester): TesterPublic {
@@ -82,7 +89,7 @@ export function getTesterByEmail(email: string): Tester | undefined {
   return testers.find((t) => t.email.toLowerCase() === email.toLowerCase());
 }
 
-export function createTester(input: TesterCreateInput): TesterPublic {
+export async function createTester(input: TesterCreateInput): Promise<TesterPublic> {
   // Check if email already exists
   if (getTesterByEmail(input.email)) {
     throw new Error('Email already exists');
@@ -92,10 +99,10 @@ export function createTester(input: TesterCreateInput): TesterPublic {
     id: crypto.randomUUID(),
     email: input.email.toLowerCase(),
     name: input.name,
-    passwordHash: hashPassword(input.password),
+    passwordHash: await hashPassword(input.password),
     createdAt: new Date().toISOString(),
-    isActive: true,
-  };
+    isActive: true,    emailVerified: false,
+    verificationToken: randomUUID(),  };
 
   testers.push(tester);
   saveTesters();
@@ -131,7 +138,7 @@ export function deleteTester(id: string): boolean {
   return false;
 }
 
-export function authenticateTester(email: string, password: string): Tester | null {
+export async function authenticateTester(email: string, password: string): Promise<Tester | null> {
   const tester = getTesterByEmail(email);
   
   if (!tester) {
@@ -142,11 +149,77 @@ export function authenticateTester(email: string, password: string): Tester | nu
     return null;
   }
 
-  if (!verifyPassword(password, tester.passwordHash)) {
+  const isValid = await verifyPassword(password, tester.passwordHash);
+  if (!isValid) {
     return null;
   }
 
   return tester;
+}
+
+export function verifyEmail(token: string): boolean {
+  const tester = testers.find(t => t.verificationToken === token);
+  
+  if (!tester || !tester.verificationToken) {
+    return false;
+  }
+
+  tester.emailVerified = true;
+  tester.verificationToken = undefined;
+  saveTesters();
+  return true;
+}
+
+export function getTesterByVerificationToken(token: string): Tester | null {
+  return testers.find(t => t.verificationToken === token) || null;
+}
+
+export function createResetToken(email: string): string | null {
+  const tester = getTesterByEmail(email);
+  
+  if (!tester) {
+    return null;
+  }
+
+  const resetToken = randomUUID();
+  const expiryDate = new Date();
+  expiryDate.setHours(expiryDate.getHours() + 1); // 1 hour expiry
+
+  tester.resetToken = resetToken;
+  tester.resetTokenExpiry = expiryDate.toISOString();
+  
+  saveTesters();
+  return resetToken;
+}
+
+export function getTesterByResetToken(token: string): Tester | null {
+  const tester = testers.find(t => t.resetToken === token);
+  
+  if (!tester || !tester.resetTokenExpiry) {
+    return null;
+  }
+
+  // Check if token has expired
+  if (new Date(tester.resetTokenExpiry) < new Date()) {
+    return null;
+  }
+
+  return tester;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
+  const tester = getTesterByResetToken(token);
+  
+  if (!tester) {
+    return false;
+  }
+
+  tester.passwordHash = await hashPassword(newPassword);
+  tester.resetToken = undefined;
+  tester.resetTokenExpiry = undefined;
+  
+  saveTesters();
+  return true;
 }
 
 // Initialize on module load
