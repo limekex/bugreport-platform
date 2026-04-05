@@ -44,6 +44,8 @@ export interface BugReporterConfig {
   getTraceContext?: () => TraceContext;
   /** Optional theme overrides */
   theme?: WidgetTheme;
+  /** Cloudflare Turnstile site key for bot protection */
+  turnstileSiteKey?: string;
 }
 
 // ─── API Types ───────────────────────────────────────────────────────────────
@@ -88,6 +90,9 @@ export interface BugReportRequest {
 
   // Optional failed network requests (JSON string of FailedNetworkEntry[])
   failedNetworkRequests?: string;
+
+  // Bot verification
+  turnstileToken?: string;
 
   // Screenshot is handled as a multipart File field by the transport layer.
   // It is intentionally omitted from the plain-object type.

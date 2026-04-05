@@ -184,6 +184,28 @@ function injectStyles(): void {
       font-size: 13px;
     }
 
+    /* ── Verification ────────────────────────────────────────── */
+    .__br_checkbox_label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      user-select: none;
+    }
+    .__br_checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #e11d48;
+    }
+    .__br_turnstile {
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+    }
+
     /* ── Submit button ───────────────────────────────────────── */
     .__br_submit_btn {
       margin-top: 18px;
@@ -254,6 +276,11 @@ export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks):
   modal.innerHTML = buildFormHtml();
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+
+  // ── Turnstile verification ────────────────────────────────────────────────
+  if (config.turnstileSiteKey) {
+    initTurnstile(config.turnstileSiteKey);
+  }
 
   // ── Close handlers ─────────────────────────────────────────────────────────
   const closeBtn = document.getElementById('__bugreport_close__');
@@ -369,6 +396,17 @@ async function handleSubmit(
 
   try {
     const values = collectFormValues(form);
+    
+    // Get Turnstile token if enabled
+    let turnstileToken: string | undefined;
+    if (config.turnstileSiteKey) {
+      turnstileToken = getTurnstileToken();
+      if (!turnstileToken) {
+        setFormState(form, 'error', 'Please complete the verification challenge');
+        return;
+      }
+    }
+    
     const formData = buildReportPayload(
       {
         summary: values.summary,
@@ -379,6 +417,7 @@ async function handleSubmit(
         stepsToReproduce: values.stepsToReproduce,
         notes: values.notes || undefined,
         environment: config.environment,
+        turnstileToken,
       },
       config,
     );
@@ -393,7 +432,7 @@ async function handleSubmit(
 
     const result = await submitReport({ apiBaseUrl: config.apiBaseUrl, formData });
 
-    setFormState(form, 'success', result.githubIssueUrl);
+    setFormState(form, 'success');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     setFormState(form, 'error', message);
@@ -454,7 +493,7 @@ function setFormState(form: HTMLFormElement, state: FormState, message?: string)
   } else if (state === 'success') {
     submitBtn.textContent = 'Submit bug report';
     statusEl.className = '__br_status_success';
-    statusEl.innerHTML = `✅ Bug report submitted! <a href="${message}" target="_blank" rel="noopener">View GitHub issue →</a>`;
+    statusEl.textContent = '✅ Bug report submitted successfully!';
     setTimeout(() => closeModal(), SUCCESS_AUTO_CLOSE_DELAY_MS);
   } else if (state === 'error') {
     submitBtn.textContent = 'Submit bug report';
@@ -533,6 +572,15 @@ function buildFormHtml(): string {
           placeholder="Anything else worth mentioning?" class="__br_textarea"></textarea>
       </div>
 
+      <div class="__br_field">
+        <label class="__br_checkbox_label">
+          <input id="__br_confirm__" type="checkbox" required class="__br_checkbox" />
+          <span>I confirm this is a legitimate bug report</span>
+        </label>
+      </div>
+
+      <div id="__br_turnstile__" class="__br_turnstile"></div>
+
       <div id="__bugreport_status__"></div>
 
       <button id="__bugreport_submit__" type="submit" class="__br_submit_btn">
@@ -541,4 +589,67 @@ function buildFormHtml(): string {
 
     </form>
   `;
+}
+
+// ── Turnstile verification ───────────────────────────────────────────────────
+
+// Global variable to store Turnstile widget ID
+let turnstileWidgetId: string | null = null;
+
+/**
+ * Loads Cloudflare Turnstile script and renders the widget.
+ */
+function initTurnstile(siteKey: string): void {
+  // Load Turnstile script if not already loaded
+  if (!document.querySelector('script[src*="challenges.cloudflare.com/turnstile"]')) {
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+    
+    script.onload = () => renderTurnstileWidget(siteKey);
+  } else {
+    // Script already loaded, render widget immediately
+    renderTurnstileWidget(siteKey);
+  }
+}
+
+/**
+ * Renders the Turnstile widget in the designated container.
+ */
+function renderTurnstileWidget(siteKey: string): void {
+  const container = document.getElementById('__br_turnstile__');
+  if (!container) return;
+
+  // Wait for Turnstile API to be available
+  const checkInterval = setInterval(() => {
+    if (typeof (window as any).turnstile !== 'undefined') {
+      clearInterval(checkInterval);
+      
+      turnstileWidgetId = (window as any).turnstile.render('#__br_turnstile__', {
+        sitekey: siteKey,
+        theme: 'light',
+        size: 'normal',
+      });
+    }
+  }, 100);
+  
+  // Timeout after 5 seconds
+  setTimeout(() => clearInterval(checkInterval), 5000);
+}
+
+/**
+ * Gets the current Turnstile response token.
+ */
+function getTurnstileToken(): string | null {
+  if (typeof (window as any).turnstile === 'undefined' || turnstileWidgetId === null) {
+    return null;
+  }
+  
+  try {
+    return (window as any).turnstile.getResponse(turnstileWidgetId);
+  } catch {
+    return null;
+  }
 }

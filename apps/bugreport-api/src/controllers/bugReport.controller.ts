@@ -5,6 +5,7 @@ import { formatIssueBody, formatIssueTitle } from '../services/issueFormatter.se
 import { buildLabels } from '../services/labelBuilder.service';
 import { createGitHubIssue, GitHubTarget } from '../services/github.service';
 import { uploadScreenshot } from '../services/storage.service';
+import { verifyTurnstileToken } from '../services/turnstile.service';
 import { config } from '../config';
 import { getMappingByOrigin } from '../store/domainMappingStore';
 import { logger } from '../lib/logger';
@@ -26,7 +27,27 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
     const reportId = nanoid();
     const timestamp = new Date().toISOString();
 
-    // 2. Resolve GitHub target from the request origin (domain mapping)
+    // 2. Verify Turnstile token if required
+    if (config.turnstile?.required && report.turnstileToken) {
+      const clientIp = req.ip || req.socket.remoteAddress;
+      const isValid = await verifyTurnstileToken(report.turnstileToken, clientIp);
+      
+      if (!isValid) {
+        res.status(400).json({
+          success: false,
+          error: 'Bot verification failed. Please try again.',
+        });
+        return;
+      }
+    } else if (config.turnstile?.required && !report.turnstileToken) {
+      res.status(400).json({
+        success: false,
+        error: 'Bot verification required.',
+      });
+      return;
+    }
+
+    // 3. Resolve GitHub target from the request origin (domain mapping)
     const origin = req.headers.origin;
     const mapping = origin ? getMappingByOrigin(origin) : undefined;
 
@@ -42,7 +63,7 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
       defaultLabels = mapping.defaultLabels;
     }
 
-    // 3. Handle optional screenshot upload
+    // 4. Handle optional screenshot upload
     let screenshotUrl: string | undefined;
     const file = req.file;
     if (file) {
@@ -50,14 +71,14 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
       screenshotUrl = result.url ?? undefined;
     }
 
-    // 4. Format issue body and title
+    // 5. Format issue body and title
     const title = formatIssueTitle(report.summary);
     const body = formatIssueBody(report, screenshotUrl, timestamp);
 
-    // 5. Build label list
+    // 6. Build label list
     const labels = buildLabels(report.severity, defaultLabels);
 
-    // 6. Create GitHub issue
+    // 7. Create GitHub issue
     const { issueNumber, issueUrl } = await createGitHubIssue({ title, body, labels }, target);
 
     logger.info({ reportId, issueNumber, issueUrl }, 'Bug report submitted successfully');
