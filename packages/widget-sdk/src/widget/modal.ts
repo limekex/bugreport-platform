@@ -2,6 +2,7 @@ import type { BugReporterConfig } from '../types/shared.types';
 import { buildReportPayload } from '../utils/payloadBuilder';
 import { submitReport } from '../utils/apiClient';
 import { capturePageScreenshot } from '../utils/screenshotCapture';
+import { openAnnotationEditor } from './annotationEditor';
 
 const SUCCESS_AUTO_CLOSE_DELAY_MS = 4000;
 const MODAL_ID = '__bugreport_modal__';
@@ -379,11 +380,22 @@ async function handleCaptureScreenshot(captureBtn: HTMLElement): Promise<void> {
     if (overlay) overlay.style.display = '';
 
     if (dataUrl && preview && captureContainer) {
-      preview.src = dataUrl;
-      preview.style.display = 'block';
-      captureContainer.value = dataUrl;
-      // Clear the file input so the capture takes precedence
-      if (fileInput) fileInput.value = '';
+      // Open annotation editor
+      openAnnotationEditor({
+        imageDataUrl: dataUrl,
+        onSave: (annotatedDataUrl: string) => {
+          // Save annotated screenshot
+          preview.src = annotatedDataUrl;
+          preview.style.display = 'block';
+          captureContainer.value = annotatedDataUrl;
+          // Clear the file input so the capture takes precedence
+          if (fileInput) fileInput.value = '';
+        },
+        onCancel: () => {
+          // User cancelled annotation, don't save screenshot
+          // Just reset the button
+        },
+      });
     }
   } catch {
     // Silently fail — the user can still upload manually
