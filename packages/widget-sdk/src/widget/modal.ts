@@ -627,11 +627,11 @@ function buildConsoleErrorsSection(): string {
   if (!errorsJson) {
     return `
       <div class="__br_field">
-        <label class="__br_label">Recent console errors</label>
+        <label class="__br_label">Recent errors & exceptions</label>
         <div class="__br_console_errors">
-          <p class="__br_no_errors">No recent console.error() calls detected</p>
+          <p class="__br_no_errors">No recent errors detected</p>
         </div>
-        <p class="__br_hint">We automatically capture console.error() calls to help diagnose issues</p>
+        <p class="__br_hint">We automatically capture console.error(), uncaught exceptions, and promise rejections</p>
       </div>
     `;
   }
@@ -656,12 +656,12 @@ function buildConsoleErrorsSection(): string {
 
   return `
     <div class="__br_field">
-      <label class="__br_label">Recent console errors (${errors.length} captured)</label>
+      <label class="__br_label">Recent errors & exceptions (${errors.length} captured)</label>
       <div class="__br_console_errors">
         <div class="__br_console_errors_title">Will be included in bug report:</div>
         ${errorItems}
       </div>
-      <p class="__br_hint">These console.error() calls will be attached to help with debugging</p>
+      <p class="__br_hint">Errors, exceptions, and rejections are automatically captured to help with debugging</p>
     </div>
   `;
 }
