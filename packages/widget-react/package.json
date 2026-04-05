@@ -1,6 +1,6 @@
 {
   "name": "@limekex/bugreport-widget-react",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "React wrapper for the BugReport Widget SDK",
   "type": "module",
   "main": "./dist/index.js",
@@ -40,7 +40,7 @@
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "@limekex/bugreport-widget-sdk": "^0.2.1"
+    "@limekex/bugreport-widget-sdk": "^0.2.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
