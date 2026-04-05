@@ -32,52 +32,55 @@ let hooked = false;
 /**
  * Installs error capture hooks for:
  * - console.error() calls
- * - Uncaught exceptions
- * - Unhandled promise rejections
+ * - Uncaught exceptions (browser only)
+ * - Unhandled promise rejections (browser only)
  *
  * Call once during SDK initialisation (`initBugReporter`).
  * Safe to call multiple times — subsequent calls are no-ops.
  */
 export function installConsoleErrorHook(): void {
-  if (hooked || typeof console === 'undefined' || typeof window === 'undefined') return;
+  if (hooked || typeof console === 'undefined') return;
   hooked = true;
 
-  // Hook console.error
+  // Hook console.error (works in both Node.js and browser)
   const originalError = console.error.bind(console);
   console.error = (...args: unknown[]) => {
     originalError(...args);
     captureError(args);
   };
 
-  // Capture uncaught exceptions
-  window.addEventListener('error', (event: ErrorEvent) => {
-    const message = event.message || 'Uncaught exception';
-    const error = event.error instanceof Error ? event.error : new Error(message);
-    
-    captureErrorObject(error, event.filename, event.lineno, event.colno);
-  });
+  // Browser-only: Capture uncaught exceptions and promise rejections
+  if (typeof window !== 'undefined') {
+    // Capture uncaught exceptions
+    window.addEventListener('error', (event: ErrorEvent) => {
+      const message = event.message || 'Uncaught exception';
+      const error = event.error instanceof Error ? event.error : new Error(message);
+      
+      captureErrorObject(error, event.filename, event.lineno, event.colno);
+    });
 
-  // Capture unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-    const reason = event.reason;
-    let message = 'Unhandled promise rejection';
-    let stack: string | undefined;
+    // Capture unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      let message = 'Unhandled promise rejection';
+      let stack: string | undefined;
 
-    if (reason instanceof Error) {
-      message = reason.message;
-      stack = reason.stack;
-    } else if (typeof reason === 'string') {
-      message = reason;
-    } else {
-      try {
-        message = JSON.stringify(reason);
-      } catch {
-        message = String(reason);
+      if (reason instanceof Error) {
+        message = reason.message;
+        stack = reason.stack;
+      } else if (typeof reason === 'string') {
+        message = reason;
+      } else {
+        try {
+          message = JSON.stringify(reason);
+        } catch {
+          message = String(reason);
+        }
       }
-    }
 
-    addToBuffer(message, stack);
-  });
+      addToBuffer(message, stack);
+    });
+  }
 }
 
 /**
