@@ -24,8 +24,8 @@ export function createApp() {
 
   const app = express();
 
-  // Trust proxy headers from Apache reverse proxy
-  app.set('trust proxy', true);
+  // Trust proxy headers from Apache reverse proxy (1 hop only)
+  app.set('trust proxy', 1);
 
   // ── Security headers ────────────────────────────────────────────────────────
   app.use(helmet({
