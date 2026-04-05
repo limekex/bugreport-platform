@@ -40,7 +40,10 @@
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "@limekex/bugreport-widget-sdk": "^0.2.2"
+    "@limekex/bugreport-widget-sdk": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
