@@ -33,14 +33,14 @@ This roadmap is inspired by the feature set of tools like Marker.io, adapted to 
 - [x] **Console error capture** — auto-attach recent `console.error` calls to the report
 - [x] **Signed upload URLs** — pre-signed S3 GET URLs when `STORAGE_PUBLIC_URL_BASE` is not configured
 - [x] **Comprehensive setup instructions** — README covers all features, env vars, and integration guide
+- [x] **Screenshot annotation** — draw arrows, rectangles, circles, freehand, and add text labels with color picker and undo
 
 ---
 
 ## Next
 
-- [ ] **Tester allow-listing** — optionally restrict submissions to a set of known tester IDs
+- [ ] **Tester allow-listing & authentication** — require testers to log in, track reporter identity in issues
 - [ ] **React wrapper component** — `<BugReporter />` component for React apps (Headless UI or Radix)
-- [ ] **Screenshot annotation** — draw arrows and highlight areas before submitting (Marker.io-style)
 
 ---
 
