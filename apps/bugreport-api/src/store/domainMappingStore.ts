@@ -72,7 +72,7 @@ export function getMappingByOrigin(origin: string): DomainMapping | undefined {
 
   // Then try wildcard match (e.g., *.vercel.app or https://*.vercel.app/)
   return mappings.find((m) => {
-    let pattern = m.origin.endsWith('/') ? m.origin.slice(0, -1) : m.origin;
+    const pattern = m.origin.endsWith('/') ? m.origin.slice(0, -1) : m.origin;
     
     // Check if pattern contains wildcard
     if (pattern.includes('*')) {
