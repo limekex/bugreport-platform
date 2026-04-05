@@ -25,14 +25,25 @@ export function injectFloatingButton(instance: WidgetInstance, theme?: WidgetThe
 
   const button = document.createElement('button');
   button.id = BUTTON_ID;
-  button.textContent = '🐛 Report bug';
+  button.textContent = '🐛';
   button.setAttribute(
     'style',
     `position:fixed;${positionStyles[position]}z-index:${zIndex};` +
-      `background:${primaryColor};color:#fff;border:none;border-radius:24px;` +
-      `padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;` +
-      `box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:opacity 0.2s;`,
+      `background:#1f2937;color:#fff;border:none;border-radius:50%;` +
+      `width:48px;height:48px;font-size:22px;cursor:pointer;` +
+      `box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:transform 0.2s,box-shadow 0.2s;` +
+      `display:flex;align-items:center;justify-content:center;`,
   );
+
+  button.addEventListener('mouseenter', () => {
+    button.style.transform = 'scale(1.1)';
+    button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+  });
+
+  button.addEventListener('mouseleave', () => {
+    button.style.transform = 'scale(1)';
+    button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+  });
 
   button.addEventListener('click', () => instance.open());
 

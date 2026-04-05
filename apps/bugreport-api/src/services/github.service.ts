@@ -24,9 +24,19 @@ export async function createGitHubIssue(
   payload: GitHubIssuePayload,
   target?: GitHubTarget,
 ): Promise<GitHubIssueResult> {
-  const owner = target?.owner ?? config.github.owner;
-  const repo = target?.repo ?? config.github.repo;
-  const token = target?.token ?? config.github.token;
+  // When target is provided (from domain mapping), use it exclusively
+  // Only fall back to .env config when NO target is provided
+  const owner = target ? target.owner : config.github.owner;
+  const repo = target ? target.repo : config.github.repo;
+  const token = target ? target.token : config.github.token;
+
+  if (!owner || !repo || !token) {
+    throw new Error(
+      target
+        ? 'Domain mapping is incomplete: missing owner, repo, or token'
+        : 'GitHub configuration missing in .env: GITHUB_OWNER, GITHUB_REPO, or GITHUB_TOKEN'
+    );
+  }
 
   const octokit = new Octokit({ auth: token });
 
