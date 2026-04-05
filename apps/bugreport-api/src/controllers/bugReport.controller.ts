@@ -83,12 +83,15 @@ export async function submitBugReport(req: Request, res: Response, next: NextFun
     let defaultLabels = config.github.defaultLabels;
 
     if (mapping) {
+      logger.info({ reportId, origin, mapping: { owner: mapping.githubOwner, repo: mapping.githubRepo } }, 'Using domain mapping for GitHub target');
       target = {
         owner: mapping.githubOwner,
         repo: mapping.githubRepo,
         token: mapping.githubToken,
       };
       defaultLabels = mapping.defaultLabels;
+    } else {
+      logger.info({ reportId, origin, fallback: { owner: config.github.owner, repo: config.github.repo } }, 'No mapping found, using .env fallback');
     }
 
     // 4. Handle optional screenshot upload

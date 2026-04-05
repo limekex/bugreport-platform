@@ -185,6 +185,15 @@ function injectStyles(): void {
     }
 
     /* ── Verification ────────────────────────────────────────── */
+    .__br_honeypot {
+      position: absolute !important;
+      left: -9999px !important;
+      width: 1px !important;
+      height: 1px !important;
+      opacity: 0 !important;
+      overflow: hidden !important;
+      pointer-events: none !important;
+    }
     .__br_checkbox_label {
       display: flex;
       align-items: center;
@@ -200,10 +209,8 @@ function injectStyles(): void {
       cursor: pointer;
       accent-color: #e11d48;
     }
-    .__br_turnstile {
-      margin-top: 12px;
-      display: flex;
-      justify-content: center;
+    .__br_math_challenge {
+      margin-bottom: 16px;
     }
 
     /* ── Submit button ───────────────────────────────────────── */
