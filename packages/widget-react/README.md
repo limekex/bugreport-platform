@@ -50,6 +50,18 @@ function App() {
 />
 ```
 
+### With Authentication Required
+
+```tsx
+<BugReporter
+  apiBaseUrl="https://gitreport.betait.no"
+  environment="staging"
+  requireAuth={true}  // Users must log in before reporting bugs
+/>
+```
+
+When `requireAuth` is enabled, users will see a login/register modal before they can submit bug reports.
+
 ### With Theme Customization
 
 ```tsx
@@ -89,6 +101,16 @@ All props from the vanilla SDK are supported:
 | `currentUser` | `object` | ❌ | Currently authenticated user |
 | `getTraceContext` | `function` | ❌ | Function returning trace context (OpenTelemetry, Sentry) |
 | `theme` | `object` | ❌ | Theme customization options |
+| `requireAuth` | `boolean` | ❌ | Require testers to log in before submitting (default: `false`) |
+
+## Features (v0.2.0+)
+
+- ✅ **Authentication Modal** — Built-in login/register UI
+- ✅ **Screenshot Annotation** — Draw arrows, shapes, and add text to screenshots
+- ✅ **Console Error Capture** — Automatically captures recent console errors
+- ✅ **Network Request Tracking** — Logs failed network requests
+- ✅ **SSR Support** — Safe for Next.js, Remix, and other SSR frameworks
+- ✅ **Bot Protection** — Honeypot and timing checks
 
 ## SSR Support
 

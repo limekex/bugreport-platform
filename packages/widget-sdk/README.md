@@ -1,11 +1,21 @@
-# @bugreport/widget-sdk
+# @limekex/bugreport-widget-sdk
 
 Reusable browser SDK for embedding the Stage Bug Reporter widget into staging/UAT applications.
+
+## Installation
+
+```bash
+npm install @limekex/bugreport-widget-sdk
+# or
+pnpm add @limekex/bugreport-widget-sdk
+# or
+yarn add @limekex/bugreport-widget-sdk
+```
 
 ## Usage
 
 ```ts
-import { initBugReporter } from '@bugreport/widget-sdk';
+import { initBugReporter } from '@limekex/bugreport-widget-sdk';
 
 initBugReporter({
   apiBaseUrl: 'https://bugreport.betait.no',
@@ -14,10 +24,11 @@ initBugReporter({
   appVersion: '1.2.3',
   commitSha: process.env.VITE_COMMIT_SHA,
   currentUser: { id: 'tester-001', email: 'tester@example.com', role: 'qa' },
+  requireAuth: true,  // Optional: require testers to log in
 });
 ```
 
-This injects a floating **🐛 Report bug** button into the page. Clicking it opens the bug report modal (placeholder).
+This injects a floating **🐛 Report bug** button into the page. Clicking it opens the bug report modal.
 
 ## Config
 
