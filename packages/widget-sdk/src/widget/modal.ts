@@ -4,6 +4,8 @@ import { submitReport, getAuthToken, getTesterInfo } from '../utils/apiClient';
 import { capturePageScreenshot } from '../utils/screenshotCapture';
 import { openAnnotationEditor } from './annotationEditor';
 import { initAuthModal, openAuthModal } from './authModal';
+import { getCollectedErrors } from '../utils/consoleCapture';
+import { selectScreenRegion, captureRegion } from '../utils/regionSelector';
 
 const SUCCESS_AUTO_CLOSE_DELAY_MS = 4000;
 const MODAL_ID = '__bugreport_modal__';
@@ -155,6 +157,14 @@ function injectStyles(): void {
     }
     .__br_capture_btn:hover { background: #e5e7eb; border-color: #9ca3af; }
     .__br_capture_btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .__br_capture_btn_secondary {
+      background: #fff;
+      border-color: #d1d5db;
+    }
+    .__br_capture_btn_secondary:hover { 
+      background: #f9fafb; 
+      border-color: #9ca3af; 
+    }
     .__br_capture_preview {
       margin-top: 8px;
       max-width: 100%;
@@ -165,6 +175,43 @@ function injectStyles(): void {
     .__br_or_divider {
       font-size: 12px;
       color: #9ca3af;
+    }
+    
+    /* ── Console errors section ──────────────────────────────── */
+    .__br_console_errors {
+      margin-top: 8px;
+      padding: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .__br_console_errors_title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #991b1b;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .__br_console_error_item {
+      font-size: 12px;
+      font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+      color: #7f1d1d;
+      margin-bottom: 4px;
+      padding: 4px 6px;
+      background: #fff;
+      border-radius: 4px;
+      word-break: break-word;
+    }
+    .__br_console_error_item:last-child {
+      margin-bottom: 0;
+    }
+    .__br_no_errors {
+      font-size: 11px;
+      color: #6b7280;
+      font-style: italic;
     }
 
     /* ── Status messages ─────────────────────────────────────── */
@@ -318,10 +365,16 @@ export function openModal(config: BugReporterConfig, callbacks: ModalCallbacks):
   // ── Focus trap ─────────────────────────────────────────────────────────────
   trapFocus(modal);
 
-  // ── Screenshot capture button ──────────────────────────────────────────────
-  const captureBtn = document.getElementById('__br_capture_btn__');
-  captureBtn?.addEventListener('click', async () => {
-    await handleCaptureScreenshot(captureBtn);
+  // ── Screenshot capture buttons ─────────────────────────────────────────────
+  const captureFullscreenBtn = document.getElementById('__br_capture_fullscreen__');
+  const captureRegionBtn = document.getElementById('__br_capture_region__');
+  
+  captureFullscreenBtn?.addEventListener('click', async () => {
+    await handleCaptureScreenshot(captureFullscreenBtn, 'fullscreen');
+  });
+
+  captureRegionBtn?.addEventListener('click', async () => {
+    await handleCaptureScreenshot(captureRegionBtn, 'region');
   });
 
   // ── Form submission ────────────────────────────────────────────────────────
@@ -378,22 +431,44 @@ function handleEscKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') closeModal();
 }
 
-async function handleCaptureScreenshot(captureBtn: HTMLElement): Promise<void> {
+async function handleCaptureScreenshot(captureBtn: HTMLElement, mode: 'fullscreen' | 'region' = 'fullscreen'): Promise<void> {
   const preview = document.getElementById('__br_capture_preview__') as HTMLImageElement | null;
   const fileInput = document.getElementById('__br_screenshot__') as HTMLInputElement | null;
   const captureContainer = document.getElementById('__br_capture_data__') as HTMLInputElement | null;
 
+  const originalText = captureBtn.textContent;
   captureBtn.setAttribute('disabled', 'true');
-  captureBtn.textContent = '📸 Capturing…';
+  captureBtn.textContent = mode === 'region' ? '✂️ Select region...' : '📸 Capturing...';
 
   try {
-    // Hide the modal overlay temporarily so it's not in the screenshot
-    const overlay = document.getElementById(OVERLAY_ID);
-    if (overlay) overlay.style.display = 'none';
+    let dataUrl: string | null = null;
 
-    const dataUrl = await capturePageScreenshot();
+    if (mode === 'region') {
+      // Show region selector
+      const region = await selectScreenRegion();
+      if (!region) {
+        // User cancelled
+        captureBtn.removeAttribute('disabled');
+        captureBtn.textContent = originalText;
+        return;
+      }
 
-    if (overlay) overlay.style.display = '';
+      // Hide modal before capturing
+      const overlay = document.getElementById(OVERLAY_ID);
+      if (overlay) overlay.style.display = 'none';
+
+      dataUrl = await captureRegion(region);
+
+      if (overlay) overlay.style.display = '';
+    } else {
+      // Fullscreen capture
+      const overlay = document.getElementById(OVERLAY_ID);
+      if (overlay) overlay.style.display = 'none';
+
+      dataUrl = await capturePageScreenshot();
+
+      if (overlay) overlay.style.display = '';
+    }
 
     if (dataUrl && preview && captureContainer) {
       // Open annotation editor
@@ -413,12 +488,13 @@ async function handleCaptureScreenshot(captureBtn: HTMLElement): Promise<void> {
         },
       });
     }
-  } catch {
+  } catch (err) {
+    console.error('Screenshot capture failed:', err);
     // Silently fail — the user can still upload manually
   }
 
   captureBtn.removeAttribute('disabled');
-  captureBtn.textContent = '📸 Capture screen';
+  captureBtn.textContent = originalText;
 }
 
 async function handleSubmit(
@@ -545,6 +621,57 @@ function setFormState(form: HTMLFormElement, state: FormState, message?: string)
   }
 }
 
+function buildConsoleErrorsSection(): string {
+  const errorsJson = getCollectedErrors();
+  
+  if (!errorsJson) {
+    return `
+      <div class="__br_field">
+        <label class="__br_label">Recent console errors</label>
+        <div class="__br_console_errors">
+          <p class="__br_no_errors">No recent console.error() calls detected</p>
+        </div>
+        <p class="__br_hint">We automatically capture console.error() calls to help diagnose issues</p>
+      </div>
+    `;
+  }
+
+  let errors: Array<{ message: string; timestamp: string }> = [];
+  try {
+    errors = JSON.parse(errorsJson);
+  } catch {
+    return '';
+  }
+
+  const errorItems = errors
+    .slice(0, 5) // Show max 5 errors in UI
+    .map(err => {
+      const time = new Date(err.timestamp).toLocaleTimeString();
+      const shortMessage = err.message.length > 100 
+        ? err.message.substring(0, 100) + '...' 
+        : err.message;
+      return `<div class="__br_console_error_item">${time}: ${escapeHtml(shortMessage)}</div>`;
+    })
+    .join('');
+
+  return `
+    <div class="__br_field">
+      <label class="__br_label">Recent console errors (${errors.length} captured)</label>
+      <div class="__br_console_errors">
+        <div class="__br_console_errors_title">Will be included in bug report:</div>
+        ${errorItems}
+      </div>
+      <p class="__br_hint">These console.error() calls will be attached to help with debugging</p>
+    </div>
+  `;
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 function buildFormHtml(): string {
   // Generate random math challenge
   const num1 = Math.floor(Math.random() * 10) + 1; // 1-10
@@ -606,17 +733,20 @@ function buildFormHtml(): string {
       <div class="__br_field">
         <label class="__br_label">Screenshot (optional)</label>
         <div class="__br_screenshot_row">
-          <button id="__br_capture_btn__" type="button" class="__br_capture_btn">📸 Capture screen</button>
+          <button id="__br_capture_fullscreen__" type="button" class="__br_capture_btn">📸 Full screen</button>
+          <button id="__br_capture_region__" type="button" class="__br_capture_btn __br_capture_btn_secondary">✂️ Select region</button>
           <span class="__br_or_divider">or</span>
           <input id="__br_screenshot__" name="screenshot" type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
-            style="font-size:13px;color:#374151;max-width:200px;" />
+            style="font-size:13px;color:#374151;max-width:160px;" />
         </div>
         <input id="__br_capture_data__" type="hidden" value="" />
         <img id="__br_capture_preview__" alt="Captured screenshot preview"
           class="__br_capture_preview" style="display:none;" />
-        <p class="__br_hint">PNG, JPG, WebP or GIF · max 5 MB</p>
+        <p class="__br_hint">Full screen or select a region · PNG, JPG, WebP or GIF · max 5 MB</p>
       </div>
+
+      ${buildConsoleErrorsSection()}
 
       <div class="__br_field">
         <label for="__br_notes__" class="__br_label">Additional notes (optional)</label>
