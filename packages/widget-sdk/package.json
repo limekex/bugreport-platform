@@ -1,6 +1,6 @@
 {
   "name": "@limekex/bugreport-widget-sdk",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Browser SDK for embedding the Stage Bug Reporter widget into staging/UAT applications",
   "keywords": [
     "bug-reporter",
