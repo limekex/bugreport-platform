@@ -56,10 +56,22 @@ export function getMappingById(id: string): DomainMapping | undefined {
 
 /**
  * Look up a mapping by the request's `Origin` header value.
+ * Supports exact matches and wildcard patterns (e.g., *.vercel.app).
  * Returns `undefined` when no mapping is configured for the given origin.
  */
 export function getMappingByOrigin(origin: string): DomainMapping | undefined {
-  return mappings.find((m) => m.origin === origin);
+  // First try exact match
+  const exactMatch = mappings.find((m) => m.origin === origin);
+  if (exactMatch) return exactMatch;
+
+  // Then try wildcard match (e.g., *.vercel.app)
+  return mappings.find((m) => {
+    if (m.origin.startsWith('*.')) {
+      const domain = m.origin.slice(2); // Remove '*.'
+      return origin.endsWith(domain);
+    }
+    return false;
+  });
 }
 
 /**
